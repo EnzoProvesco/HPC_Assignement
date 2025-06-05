@@ -3,7 +3,7 @@
 #include <vector>
 
 double g_x_y_calculation(int x, int y, cv::Mat channel){
-    std::vector<std::vector<int>> M = {
+    std::vector<std::vector<int>> W = {
         {1, 2, 1},
         {3, 4, 3},
         {1, 2, 1}
@@ -13,7 +13,7 @@ double g_x_y_calculation(int x, int y, cv::Mat channel){
     for (int i = 0; i < 3; i++){
         for (int j = 0; j < 3; j++) {
             ////std::cout << "M[" << i << "][" << j << "] = " << M[i][j] << std::endl;
-            sum += M[i][j] * channel.at<double>(x + i - 1, y + j - 1);
+            sum += (1.0/16.0) *  W[i][j] * channel.at<double>(x + i - 1, y + j - 1);
         }
     }
     ////std::cout << "Sum: " << sum << std::endl;
@@ -23,27 +23,36 @@ double g_x_y_calculation(int x, int y, cv::Mat channel){
 
 
 cv::Mat createG_x_y_Matrix(cv::Mat channel) {
-    cv::Mat gxy = cv::Mat::zeros(channel.rows, channel.cols, CV_32F);
+    cv::Mat gxy = cv::Mat::zeros(channel.rows, channel.cols, CV_64F);
+    
+    cv::Mat ch64;
+    channel.convertTo(ch64, CV_64F);
+    for (int x = 1; x < channel.rows - 1; x++) {
+        for (int y = 1; y < channel.cols - 1; y++) {
 
-    for (int x = 0; x < channel.rows; x++) {
-        for (int y = 0; y < channel.cols; y++) {
-            if (x > 0 && x + 1 <= channel.rows && y > 0 && y + 1 <= channel.cols) {
-                gxy.at<double>(x, y) = 1/16.0 * g_x_y_calculation(x, y, channel);
-            }
+            gxy.at<double>(x, y) = g_x_y_calculation(x, y, ch64);
+
+            std::cout<<"At[" << x <<"][" << y <<"] previous value: " << channel.at<double>(x, y) << "    then -> " << gxy.at<double>(x, y) << std::endl;
         }
     }
+
+    cv::Mat gxy_normalized, gxy_8U;
+    cv::normalize(gxy, gxy_normalized, 255, 0, cv::NORM_MINMAX);
+    gxy_normalized.convertTo(gxy_8U, CV_8U);
+    /*
     for (int x = 0; x < channel.rows; x++) {
         for (int y = 0; y < channel.cols; y++) {
-            //std::cout << "gxy at (" << x << ", " << y << "): " << gxy.at<double>(x, y) << std::endl;
+            std::cout << "gxy at (" << x << ", " << y << "): " << gxy.at<double>(x, y) << std::endl;
         }
     }
-    return gxy;
+    */
+    return gxy_8U;
 }
 
 
 int main(){
     //Read the Image
-    cv::Mat image = cv::imread("image.png", cv::IMREAD_COLOR);
+    cv::Mat image = cv::imread("ImageBlurred.png", cv::IMREAD_COLOR);
 
     // Decomposition of the image into its RGB channels
     if(image.empty()) {
@@ -51,24 +60,34 @@ int main(){
         return -1;
     }
 
+
     std::vector<cv::Mat> channels;
     cv::split(image, channels);
 
+    cv::imshow("Red Channel", channels[2]);
+    cv::imshow("Green Channel", channels[1]);
+    cv::imshow("Blue Channel", channels[0]);
+    cv::waitKey(0);
+    std::cout << "Red channel " << std::endl;
     cv::Mat Redgxy = createG_x_y_Matrix(channels[2]);
+    scanf("%*c"); // Wait for user input to continue
     //std::cout<<"Computed the red channel:" << std::endl;
 
+    std::cout << "Green channel " << std::endl;
     cv::Mat Greengxy = createG_x_y_Matrix(channels[1]);
+    scanf("%*c"); // Wait for user input to continue
     //std::cout<<"Computed the green channel:" << std::endl;
-
+    std::cout << "Blue channel " << std::endl;
     cv::Mat Bluegxy = createG_x_y_Matrix(channels[0]);
     //std::cout<<"Computed the blue channel:" << std::endl;
+    scanf("%*c"); // Wait for user input to continue
 
-
+    
 
     //Recombine the image
     cv::Mat gxy;
-    cv::merge(std::vector<cv::Mat>{Redgxy, Greengxy, Bluegxy}, gxy);
+    cv::merge(std::vector<cv::Mat>{Bluegxy, Greengxy, Redgxy}, gxy);
 
-    cv::imwrite("./output/testImg.jpg", )
+    cv::imwrite("./output/result.jpg", gxy);
     return 0;
 }
