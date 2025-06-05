@@ -53,36 +53,22 @@ int main(){
 
     std::vector<cv::Mat> channels;
     cv::split(image, channels);
-    // Display the result
-    cv::imshow("Red Channel", channels[2]);
-    cv::imshow("Green Channel", channels[1]);
-    cv::imshow("Blue Channel", channels[0]);
-    cv::waitKey(0);
 
-
-    // Check if t
     cv::Mat Redgxy = createG_x_y_Matrix(channels[2]);
     //std::cout<<"Computed the red channel:" << std::endl;
-    cv::imshow("Red Channel Comp", Redgxy);
-    cv::waitKey(0);
 
     cv::Mat Greengxy = createG_x_y_Matrix(channels[1]);
     //std::cout<<"Computed the green channel:" << std::endl;
-    cv::imshow("Green Channel Comp", Greengxy);
-    cv::waitKey(0);
 
     cv::Mat Bluegxy = createG_x_y_Matrix(channels[0]);
     //std::cout<<"Computed the blue channel:" << std::endl;
-    cv::imshow("Blue Channel Comp", Bluegxy);
-    cv::waitKey(0);
+
 
 
     //Recombine the image
     cv::Mat gxy;
     cv::merge(std::vector<cv::Mat>{Redgxy, Greengxy, Bluegxy}, gxy);
-    // Display the result
-    cv::imshow("Gxy Image", gxy);
-    cv::waitKey(0);
-    return 0;
 
+    cv::imwrite("./output/testImg.jpg", )
+    return 0;
 }
