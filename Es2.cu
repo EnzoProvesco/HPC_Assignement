@@ -10,6 +10,7 @@
                                              Function to get the image in order to visualize it 
                                                                 
 ------------------------------------------------------------------------------------------------------------------------------------------*/
+
 cv::Mat createG_x_y_Matrix(int channelId, float* gxy, int C, int R){
     cv::Mat gxy_cpu, tempMat;
     cv::Mat gxy_normalized, gxy_8U;
