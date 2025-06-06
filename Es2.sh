@@ -9,6 +9,6 @@ nvcc Es2.cu -o Es2 \
   -I/usr/include/opencv4 \
   -L/usr/lib/aarch64-linux-gnu \
   -lopencv_core -lopencv_imgcodecs -lopencv_highgui -lopencv_imgproc \
-  -lstdc++ -lcudart
+  -lstdc++ -lcudart -lboost_filesystem -lboost_system
 
 ./Es2
