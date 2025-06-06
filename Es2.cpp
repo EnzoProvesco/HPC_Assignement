@@ -50,6 +50,9 @@ __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int
     gxy[idx] = sum;
 }
 
+
+
+
 int main(){
     //Read the Image
     cv::Mat image = cv::imread("ImageBlurred.png", cv::IMREAD_COLOR);
@@ -89,6 +92,9 @@ int main(){
     cudaMemcpy(channel, ch64.data, 3 * channel[0].rows * channel[0].cols * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(gxy, gxy.data, 3 * channel[0].rows * channel[0].cols * sizeof(float), cudaMemcpyHostToDevice);
 
+    g_x_y_calculation<<<numBlocks, threadsPerBlock>>>(channel, gxy, 3, channel[0].rows, channel[0].cols);
+    
+
     cv::Mat gxy_normalized, gxy_8U;
     cv::normalize(gxy, gxy_normalized, 255, 0, cv::NORM_MINMAX);
     gxy_normalized.convertTo(gxy_8U, CV_8U);
@@ -116,7 +122,6 @@ int main(){
     //Recombine the image
     cv::Mat gxy;
     cv::merge(std::vector<cv::Mat>{Bluegxy, Greengxy, Redgxy}, gxy);
-
     cv::imwrite("./output/result.jpg", gxy);
     return 0;
 }
