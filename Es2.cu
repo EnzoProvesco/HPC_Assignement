@@ -2,7 +2,6 @@
 #include <iostream>
 #include <vector>
 #include <cstdlib>
-#include <filesystem>
 #include <cuda_runtime.h>
 
 /*----------------------------------------------------------------------------------------------------------------------------------------
@@ -185,23 +184,21 @@ cv::Mat GetResult(std::string imagePath) {
     return gxyResult;
 }
 
-
-
-namespace fs = std::filesystem;
-
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
     
                                                                     Main Function
 
     ------------------------------------------------------------------------------------------------------------------------------------------------*/
 
-int main() {
-    fs::path input_dir = "./input"; // Directory containing the input images
-    fs::path output_dir = "./output"; // Directory to save the processed images
-    // Create the output directory if it doesn't exist
-    if (!fs::exists(output_dir)) {
-        fs::create_directories(output_dir);
+int main(int argc, char** argv) {
+
+    for (int i = 1; i < argc; i+=2) {
+        std::cout << "Processing image: " << argv[i] << std::endl;
+        cv::Mat result = GetResult(argv[i]);
+        std::cout << "Saving result to: " << argv[i+1] << std::endl;
+        cv::imwrite(argv[i+1], result);
     }
+/*
     for (const auto& subdir_entry : fs::directory_iterator(input_dir)){
         if (subdir_entry.is_directory()) {
             fs::path subdir_path = subdir_entry.path();
@@ -219,5 +216,6 @@ int main() {
             }
         }
     }
+*/
     return 0;
 }
