@@ -20,25 +20,19 @@ La funzione main deve ancora gestire gli errori di OpenCV e CUDA.
 */
 
 cv::Mat createG_x_y_Matrix(int channelId, float* gxy, int C, int R){
-    // Create a vector to hold the gxy matrices for each channel
-    std::vector<cv::Mat> gxy_cpu(3);
+    cv::Mat gxy_cpu, tempMat;
+    cv::Mat gxy_normalized, gxy_8U;
+    std::vector<float> temp(3 * R * C);
 
     //copy all the channels from device to host
-    cudaMemcpy(gxy_cpu.data(), gxy, 3 * R * C * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(temp.data(), gxy, 3 * R * C * sizeof(float), cudaMemcpyDeviceToHost);
     
-    // Create a cv::Mat to hold the gxy matrix for the specified channel
-    cv::Mat gxyMat(R, C, CV_32F);
-    cv::Mat gxy_normalized, gxy_8U;
-    
-    // Save only the right channel matrix
-    for (int i = 0; i < R; i++) {
-        for (int j = 0; j < C; j++) {
-            gxyMat.at<float>(i, j) = gxy[channelID].at<float>(i, j);
-        }
-    }
+    // Choose the right channel from the temp vector
+    tempMat = cv::Mat(R, C, CV_32F, temp + channelId  * R * C);
+    gxy_cpu = tempMat.clone();
 
     // Normalize the matrix to the range [0, 255] and convert to CV_8U for visualization
-    cv::normalize(gxyMat, gxy_normalized, 0, 255, cv::NORM_MINMAX);
+    cv::normalize(gxy_cpu, gxy_normalized, 0, 255, cv::NORM_MINMAX);
     gxy_normalized.convertTo(gxy_8U, CV_8U);
     
     return gxy_8U;
