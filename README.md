@@ -1,2 +1,2 @@
 # HPC_Assignement
-x
+Funziona per Mixto perchè è vecchissimo sto coso
