@@ -10,6 +10,8 @@
 #SBATCH --mem-per-cpu=1M
 #SBATCH --gres=gpu:1
 
+export CUDA_N_THREADS=16
+
 module load nvidia/cudasdk/10.1
 module load opencv
 

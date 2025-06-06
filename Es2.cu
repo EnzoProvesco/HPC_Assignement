@@ -67,7 +67,7 @@ int main(){
     std::vector<cv::Mat> channels;
     cv::split(image, channels);
 
-    const char* nThreads = std::getenv("CUDA_N_THREADS")
+    const char* nThreads = std::getenv("CUDA_N_THREADS");
 
     std::vector<cv::Mat> gxy_channels(3);
     std::vector<cv::Mat> ch64(3);
