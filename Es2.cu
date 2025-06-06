@@ -82,7 +82,7 @@ cv::Mat GetResult(std::string imagePath) {
     ------------------------------------------------------------------------------------------------------------------------------------------------*/
     
     //Read the Image
-    cv::Mat image = cv::imread("ImageBlurred.png", cv::IMREAD_COLOR);
+    cv::Mat image = cv::imread(imagePath, cv::IMREAD_COLOR);
 
     // Decomposition of the image into its RGB channels
     if(image.empty()) {
