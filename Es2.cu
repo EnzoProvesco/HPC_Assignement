@@ -41,10 +41,10 @@ __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int
     int z = blockIdx.z * blockDim.z + threadIdx.z; //channel index
 
 
-    int idx = z * (R * CO) + x * (CO) + y;
-    if (x > R || y > CO || z > CH) return;
+    int idx = z * (R * CO) + y * CO + x;
+    if (x >= CO || y >= R || z >= CH) return;
 
-    if (x <= 0 || x >= R - 1 || y <= 0 || y >= CO - 1) {
+    if (x <= 0 || x >= CO - 1 || y <= 0 || y >= R - 1) {
         gxy[idx] = 0.0;
         return;
     }
