@@ -1,0 +1,47 @@
+Processing image: ./input/reference/pexels-christian-heitz.jpg //16K image
+Thread used: 1
+Red channel 
+Green channel 
+Blue channel 
+Elapsed time: 47044 ms
+Saving result to: ./output/reference/pexels-christian-heitz.jpg
+
+Processing image: ./input/reference/pexels-christian-heitz.jpg
+Thread used: 4
+Red channel 
+Green channel 
+Blue channel 
+Elapsed time: 25724 ms
+Saving result to: ./output/reference/pexels-christian-heitz.jpg
+
+Processing image: ./input/reference/pexels-christian-heitz.jpg
+Thread used: 16
+Red channel 
+Green channel 
+Blue channel 
+Elapsed time: 20835 ms
+Saving result to: ./output/reference/pexels-christian-heitz.jpg
+
+Processing image: ./input/reference/pexels-christian-heitz.jpg
+Thread used: 64
+Red channel 
+Green channel 
+Blue channel 
+Elapsed time: 21224 ms
+Saving result to: ./output/reference/pexels-christian-heitz.jpg
+
+Processing image: ./input/reference/pexels-christian-heitz.jpg
+Thread used: 256
+Red channel 
+Green channel 
+Blue channel 
+Elapsed time: 20821 ms
+Saving result to: ./output/reference/pexels-christian-heitz.jpg
+
+Processing image: ./input/reference/pexels-christian-heitz.jpg
+Thread used: 1024
+Red channel 
+Green channel 
+Blue channel 
+Elapsed time: 20850 ms
+Saving result to: ./output/reference/pexels-christian-heitz.jpg
