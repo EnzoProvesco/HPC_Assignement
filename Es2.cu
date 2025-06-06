@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <cstdlib>
+#include <chrono>
 #include <cuda_runtime.h>
 
 /*----------------------------------------------------------------------------------------------------------------------------------------
@@ -99,7 +100,8 @@ cv::Mat GetResult(std::string imagePath) {
                                                                         CUDA Setup
 
     ------------------------------------------------------------------------------------------------------------------------------------------------*/
-    
+    // start the timer
+    auto start = std::chrono::high_resolution_clock::now();
     // get the number of threads from the environment variable
     const int nThreads = std::atoi(std::getenv("CUDA_N_THREADS"));
 
@@ -176,7 +178,11 @@ cv::Mat GetResult(std::string imagePath) {
     cudaFree(channel);
     cudaFree(gxy);
 
-
+    //end the timer
+    auto end = std::chrono::high_resolution_clock::now();
+    // Calculate the elapsed time in milliseconds
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cout << "Elapsed time: " << elapsed << " ms" << std::endl;
     //Recombine the image
     cv::Mat gxyResult;
     cv::merge(std::vector<cv::Mat>{Bluegxy, Greengxy, Redgxy}, gxyResult);
