@@ -10,4 +10,4 @@ nvcc Es2.cu -o Es2 \
   -lopencv_core -lopencv_imgcodecs -lopencv_highgui -lopencv_imgproc \
   -lstdc++ -lcudart
 
-./Es2 ./input/noise90/climate_changeN90.jpg ./output/noise90/climate_changeN90result.jpg
+./Es2 ./input/noise90/Winding_roadN90.jpg ./output/noise90/Winding_roadN90.jpg
