@@ -1,11 +1,15 @@
 #!/bin/bash
-#SBATCH -J cudaExerciseAssignement
-#SBATCH --time=0:05:00
-#SBATCH -n 5
+#SBATCH --job-name=GPU_exercise
+#SBATCH --mail-type=ALL
 #SBATCH --mail-user=s343738@studenti.polito.it
-#SBATCH --mail-type=end
+#SBATCH --partition=cuda
+#SBATCH --time=00:05:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --output=GPU_exercise.log
+#SBATCH --mem-per-cpu=1M
+#SBATCH --gres=gpu:1
 
-# load cuda module
 module load nvidia/cudasdk/10.1
 module load opencv
 
