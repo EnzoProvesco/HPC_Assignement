@@ -18,16 +18,32 @@ La funzione main deve ancora gestire gli errori di OpenCV e CUDA.
 
 
 */
+
 cv::Mat createG_x_y_Matrix(int channelId, float* gxy, int C, int R){
-    cv::Mat gxyMat(R, C, CV_64F);
+    // Create a vector to hold the gxy matrices for each channel
+    std::vector<cv::Mat> gxy_cpu(3);
+
+    //copy all the channels from device to host
+    cudaMemcpy(gxy_cpu.data(), gxy, 3 * R * C * sizeof(float), cudaMemcpyDeviceToHost);
+    
+    // Create a cv::Mat to hold the gxy matrix for the specified channel
+    cv::Mat gxyMat(R, C, CV_32F);
+    cv::Mat gxy_normalized, gxy_8U;
+    
+    // Save only the right channel matrix
     for (int i = 0; i < R; i++) {
         for (int j = 0; j < C; j++) {
-            int idx = channelId * (R * C) + i * C + j;
-            gxyMat.at<double>(i, j) = gxy[idx];
+            gxyMat.at<float>(i, j) = gxy[channelID].at<float>(i, j);
         }
     }
-    return gxyMat;
+
+    // Normalize the matrix to the range [0, 255] and convert to CV_8U for visualization
+    cv::normalize(gxyMat, gxy_normalized, 0, 255, cv::NORM_MINMAX);
+    gxy_normalized.convertTo(gxy_8U, CV_8U);
+    
+    return gxy_8U;
 }
+
 
 
 
@@ -65,6 +81,12 @@ __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int
 
 
 int main(){
+    /* ----------------------------------------------------------------------------------------------------------------------------------------------
+    
+                                                                        OpenCV Setup
+
+    ------------------------------------------------------------------------------------------------------------------------------------------------*/
+    
     //Read the Image
     cv::Mat image = cv::imread("ImageBlurred.png", cv::IMREAD_COLOR);
 
@@ -74,64 +96,98 @@ int main(){
         return -1;
     }  
 
-
     std::vector<cv::Mat> channels;
     cv::split(image, channels);
 
+
+    /* ----------------------------------------------------------------------------------------------------------------------------------------------
+    
+                                                                        CUDA Setup
+
+    ------------------------------------------------------------------------------------------------------------------------------------------------*/
+    
+    // get the number of threads from the environment variable
     const int nThreads = std::atoi(std::getenv("CUDA_N_THREADS"));
 
+    // instatiate cv matrix from which you will get the data to be stored in CUDA memory
     std::vector<cv::Mat> gxy_channels(3);
-    std::vector<cv::Mat> ch64(3);
+    std::vector<cv::Mat> ch32(3);
+
+    // Convert the channels to CV_32F for CUDA processing
 
     for (int i = 0; i < 3; i++) {
-        gxy_channels[i] = cv::Mat::zeros(channels[i].rows, channels[i].cols, CV_64F);
-        channels[i].convertTo(ch64[i], CV_64F);
+
+        // create a matrix to hold the processed data initialized to all 0s
+        gxy_channels[i] = cv::Mat::zeros(channels[i].rows, channels[i].cols, CV_32F);
+        
+        // create a matrix to hold the channel data converted to CV_32F
+        channels[i].convertTo(ch32[i], CV_32F);
     }
     
-
+    // Allocate memory for the channels (data as input) and gxy (data processed) on the device
     float *channel, *gxy;
+
+
+    // Define the number of threads per block and the number of blocks
     dim3 threadsPerBlock(nThreads, nThreads);
     dim3 numBlocks(
         (channels[0].cols + threadsPerBlock.x - 1) / threadsPerBlock.x,
         (channels[0].rows + threadsPerBlock.y - 1) / threadsPerBlock.y,
-        3 // Assuming 3 channels
+        3 // 3 channels (R, G, B)
     );
-
+    
+    // Allocate memory on the device for the channels and gxy
     cudaMalloc(&channel, 3 * channels[0].rows * channels[0].cols * sizeof(float));
     cudaMalloc(&gxy, 3 * channels[0].rows * channels[0].cols * sizeof(float));
-
-    cudaMemcpy(channel, ch64.data, 3 * channels[0].rows * channels[0].cols * sizeof(float), cudaMemcpyHostToDevice);
+    
+    // copy the data from the image
+    cudaMemcpy(channel, ch32.data, 3 * channels[0].rows * channels[0].cols * sizeof(float), cudaMemcpyHostToDevice);
+    // copy the all 0s matrix that host the processed data
     cudaMemcpy(gxy, gxy.data, 3 * channels[0].rows * channels[0].cols * sizeof(float), cudaMemcpyHostToDevice);
-
+    
+    // Launch the kernel to calculate gxy for each channel
     g_x_y_calculation<<<numBlocks, threadsPerBlock>>>(channel, gxy, 3, channels[0].rows, channels[0].cols);
     
 
-    cv::Mat gxy_normalized, gxy_8U;
-    cv::normalize(gxy, gxy_normalized, 255, 0, cv::NORM_MINMAX);
-    gxy_normalized.convertTo(gxy_8U, CV_8U);
-    
+    /*-----------------------------------------------------------------------------------------------------------------------------------------------
+                                                                        
+                                                                    Display and Save Results
+
+    ------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+    /* Local debugging
     cv::imshow("Red Channel", channels[2]);
     cv::imshow("Green Channel", channels[1]);
     cv::imshow("Blue Channel", channels[0]);
     cv::waitKey(0);
+    */
+
+
+    //                                                     Create the gxy matrices for each channel
+    
+    //Red Channel
     std::cout << "Red channel " << std::endl;
     cv::Mat Redgxy = createG_x_y_Matrix(2, gxy, channels[2].cols, channels[2].rows);
-    //std::cout<<"Computed the red channel:" << std::endl;
 
+    //Green Channel
     std::cout << "Green channel " << std::endl;
     cv::Mat Greengxy = createG_x_y_Matrix(1, gxy, channels[1].cols, channels[1].rows);
-    //std::cout<<"Computed the green channel:" << std::endl;
     
+    //Blue Channel
     std::cout << "Blue channel " << std::endl;
     cv::Mat Bluegxy = createG_x_y_Matrix(0, gxy, channels[0].cols, channels[0].rows);
-    //std::cout<<"Computed the blue channel:" << std::endl;
       
+    // Cuda free the memory
     cudaFree(channel);
     cudaFree(gxy);
-    std::cout<<"Freed the memory" << std::endl;
+
+
     //Recombine the image
-    cv::Mat gxy;
-    cv::merge(std::vector<cv::Mat>{Bluegxy, Greengxy, Redgxy}, gxy);
-    cv::imwrite("./output/result.jpg", gxy);
+    cv::Mat gxyResult;
+    cv::merge(std::vector<cv::Mat>{Bluegxy, Greengxy, Redgxy}, gxyResult);
+    
+    //Save the result
+    cv::imwrite("./output/result.jpg", gxyResult);
+    
     return 0;
 }
