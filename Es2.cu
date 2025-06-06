@@ -104,23 +104,24 @@ int main(){
     const int nThreads = std::atoi(std::getenv("CUDA_N_THREADS"));
 
     // instatiate cv matrix from which you will get the data to be stored in CUDA memory
-    std::vector<cv::Mat> gxy_channels(3);
     std::vector<cv::Mat> ch32(3);
+    std::vector<float> channel_host(3 * channels[0].rows * channels[0].cols);    
 
-    // Convert the channels to CV_32F for CUDA processing
-
-    for (int i = 0; i < 3; i++) {
-
-        // create a matrix to hold the processed data initialized to all 0s
-        gxy_channels[i] = cv::Mat::zeros(channels[i].rows, channels[i].cols, CV_32F);
-        
+    // Convert the channels to CV_32F for CUDA processing and Flat the channels into a single vector
+    for (int i = 0; i < 3; i++) {        
         // create a matrix to hold the channel data converted to CV_32F
         channels[i].convertTo(ch32[i], CV_32F);
+        std::memcpy(
+            channel_host.data() + i * channels[0].rows * channels[0].cols,
+            ch32[i].ptr<float>(),
+            channels[0].rows * channels[0].cols * sizeof(float)
+        );
     }
+    // Initialize the gxy vector with zeros
+    std::vector<float> gxy_channels(3 * channels[0].rows * channels[0].cols, 0.0f);
     
     // Allocate memory for the channels (data as input) and gxy (data processed) on the device
     float *channel, *gxy;
-
 
     // Define the number of threads per block and the number of blocks
     dim3 threadsPerBlock(nThreads, nThreads);
@@ -133,11 +134,11 @@ int main(){
     // Allocate memory on the device for the channels and gxy
     cudaMalloc(&channel, 3 * channels[0].rows * channels[0].cols * sizeof(float));
     cudaMalloc(&gxy, 3 * channels[0].rows * channels[0].cols * sizeof(float));
-    
+
     // copy the data from the image
-    cudaMemcpy(channel, ch32.data, 3 * channels[0].rows * channels[0].cols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(channel, channel_host.data(), 3 * channels[0].rows * channels[0].cols * sizeof(float), cudaMemcpyHostToDevice);
     // copy the all 0s matrix that host the processed data
-    cudaMemcpy(gxy, gxy.data, 3 * channels[0].rows * channels[0].cols * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(gxy, gxy.data(), 3 * channels[0].rows * channels[0].cols * sizeof(float), cudaMemcpyHostToDevice);
     
     // Launch the kernel to calculate gxy for each channel
     g_x_y_calculation<<<numBlocks, threadsPerBlock>>>(channel, gxy, 3, channels[0].rows, channels[0].cols);
