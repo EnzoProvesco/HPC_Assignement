@@ -2,10 +2,8 @@
 #include <iostream>
 #include <vector>
 #include <cstdlib>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <cuda_runtime.h>
-
-namespace fs = boost::filesystem;
 
 /*----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -187,6 +185,9 @@ cv::Mat GetResult(std::string imagePath) {
     return gxyResult;
 }
 
+
+
+namespace fs = std::filesystem;
 
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
     
