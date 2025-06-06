@@ -1,6 +1,7 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <vector>
+#include <chrono>
 
 double g_x_y_calculation(int x, int y, cv::Mat channel){
     std::vector<std::vector<int>> W = {
@@ -32,7 +33,6 @@ cv::Mat createG_x_y_Matrix(cv::Mat channel) {
 
             gxy.at<double>(x, y) = g_x_y_calculation(x, y, ch64);
 
-            std::cout<<"At[" << x <<"][" << y <<"] previous value: " << channel.at<double>(x, y) << "    then -> " << gxy.at<double>(x, y) << std::endl;
         }
     }
 
@@ -50,9 +50,10 @@ cv::Mat createG_x_y_Matrix(cv::Mat channel) {
 }
 
 
-int main(){
+int main(int argc, char** argv) {
     //Read the Image
-    cv::Mat image = cv::imread("ImageBlurred.png", cv::IMREAD_COLOR);
+
+    cv::Mat image = cv::imread(argv[1], cv::IMREAD_COLOR);
 
     // Decomposition of the image into its RGB channels
     if(image.empty()) {
@@ -64,30 +65,27 @@ int main(){
     std::vector<cv::Mat> channels;
     cv::split(image, channels);
 
-    cv::imshow("Red Channel", channels[2]);
-    cv::imshow("Green Channel", channels[1]);
-    cv::imshow("Blue Channel", channels[0]);
-    cv::waitKey(0);
-    std::cout << "Red channel " << std::endl;
+    // start the timer
+    auto start = std::chrono::high_resolution_clock::now();
+
     cv::Mat Redgxy = createG_x_y_Matrix(channels[2]);
-    scanf("%*c"); // Wait for user input to continue
-    //std::cout<<"Computed the red channel:" << std::endl;
 
-    std::cout << "Green channel " << std::endl;
     cv::Mat Greengxy = createG_x_y_Matrix(channels[1]);
-    scanf("%*c"); // Wait for user input to continue
-    //std::cout<<"Computed the green channel:" << std::endl;
-    std::cout << "Blue channel " << std::endl;
+
     cv::Mat Bluegxy = createG_x_y_Matrix(channels[0]);
-    //std::cout<<"Computed the blue channel:" << std::endl;
-    scanf("%*c"); // Wait for user input to continue
 
-    
+    // stop the timer
+    auto end = std::chrono::high_resolution_clock::now();
 
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Time taken to process the image: " << elapsed.count() << " seconds" << std::endl;
     //Recombine the image
     cv::Mat gxy;
     cv::merge(std::vector<cv::Mat>{Bluegxy, Greengxy, Redgxy}, gxy);
 
-    cv::imwrite("./output/result.jpg", gxy);
+
+    cv::imwrite(argv[2], gxy);
+
+
     return 0;
 }
