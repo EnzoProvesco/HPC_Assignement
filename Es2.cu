@@ -2,8 +2,10 @@
 #include <iostream>
 #include <vector>
 #include <cstdlib>
-#include <filesystem>
+#include <boost/filesystem.hpp>
 #include <cuda_runtime.h>
+
+namespace fs = boost::filesystem;
 
 /*----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -88,7 +90,7 @@ cv::Mat GetResult(std::string imagePath) {
     // Decomposition of the image into its RGB channels
     if(image.empty()) {
         std::cerr << "Error: Could not open or find the image!" << std::endl;
-        return -1;
+        exit(EXIT_FAILURE);
     }  
 
     std::vector<cv::Mat> channels;
@@ -185,9 +187,6 @@ cv::Mat GetResult(std::string imagePath) {
     return gxyResult;
 }
 
-
-
-namespace fs = std::filesystem;
 
 /* ----------------------------------------------------------------------------------------------------------------------------------------------
     
