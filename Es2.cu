@@ -105,6 +105,7 @@ cv::Mat GetResult(std::string imagePath) {
     auto start = std::chrono::high_resolution_clock::now();
     // get the number of threads from the environment variable
     const int nThreads = std::atoi(std::getenv("CUDA_N_THREADS"));
+    std::cout << "Thread used: " << nThreads * nThreads << std::endl;
 
     // instatiate cv matrix from which you will get the data to be stored in CUDA memory
     std::vector<cv::Mat> ch32(3);
@@ -198,6 +199,27 @@ cv::Mat GetResult(std::string imagePath) {
     ------------------------------------------------------------------------------------------------------------------------------------------------*/
 
 int main(int argc, char** argv) {
+    int deviceCount = 0;
+    cudaGetDeviceCount(&deviceCount);
+    for (int i = 0; i < deviceCount; ++i) {
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, i);
+
+        std::cout << "Dispositivo " << i << ": " << prop.name << std::endl;
+        std::cout << "  Multiprocessori: " << prop.multiProcessorCount << std::endl;
+        std::cout << "  Max thread per blocco: " << prop.maxThreadsPerBlock << std::endl;
+        std::cout << "  Max thread per multiprocessore: " << prop.maxThreadsPerMultiProcessor << std::endl;
+        std::cout << "  Dimensioni massime di un blocco: "
+                  << prop.maxThreadsDim[0] << " x "
+                  << prop.maxThreadsDim[1] << " x "
+                  << prop.maxThreadsDim[2] << std::endl;
+        std::cout << "  Dimensioni massime della griglia: "
+                  << prop.maxGridSize[0] << " x "
+                  << prop.maxGridSize[1] << " x "
+                  << prop.maxGridSize[2] << std::endl;
+        std::cout << "-------------------------------\n";
+    }
+
 
     for (int i = 1; i < argc; i+=2) {
         std::cout << "Processing image: " << argv[i] << std::endl;
