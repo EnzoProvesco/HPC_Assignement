@@ -28,7 +28,7 @@ cv::Mat createG_x_y_Matrix(int channelId, float* gxy, int C, int R){
     cudaMemcpy(temp.data(), gxy, 3 * R * C * sizeof(float), cudaMemcpyDeviceToHost);
     
     // Choose the right channel from the temp vector
-    tempMat = cv::Mat(R, C, CV_32F, temp + channelId  * R * C);
+    tempMat = cv::Mat(R, C, CV_32F, temp.data() + channelId  * R * C);
     gxy_cpu = tempMat.clone();
 
     // Normalize the matrix to the range [0, 255] and convert to CV_8U for visualization
