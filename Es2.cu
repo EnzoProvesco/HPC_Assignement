@@ -2,23 +2,14 @@
 #include <iostream>
 #include <vector>
 #include <cstdlib>
+#include <filesystem>
 #include <cuda_runtime.h>
 
-/*Ho creato la funzione kernel cuda e dovrebbe andare: 
-z è il canale, x è la riga e y è la colonna
+/*----------------------------------------------------------------------------------------------------------------------------------------
 
-
-Ho creato pure il numero di thread per blocco e il numero di blocchi in base alla dimensione dell'immagine.
-La funzione kernel calcola il valore di gxy per ogni pixel dell'immagine in base alla formula data.
-La funzione main legge l'immagine, la divide nei canali RGB, converte i canali in float e li copia nella memoria del dispositivo.
-La funzione main deve ancora chiamare la funzione kernel per calcolare gxy per ogni canale e poi ricompone l'immagine finale.
-La funzione main deve ancora mostrare l'immagine finale e salvarla su disco.
-La funzione main deve ancora gestire la memoria del dispositivo e liberarla alla fine.
-La funzione main deve ancora gestire gli errori di OpenCV e CUDA.
-
-
-*/
-
+                                             Function to get the image in order to visualize it 
+                                                                
+------------------------------------------------------------------------------------------------------------------------------------------*/
 cv::Mat createG_x_y_Matrix(int channelId, float* gxy, int C, int R){
     cv::Mat gxy_cpu, tempMat;
     cv::Mat gxy_normalized, gxy_8U;
@@ -39,7 +30,11 @@ cv::Mat createG_x_y_Matrix(int channelId, float* gxy, int C, int R){
 }
 
 
+/* ----------------------------------------------------------------------------------------------------------------------------------------
 
+                                                                CUDA Kernel for gxy calculation
+
+------------------------------------------------------------------------------------------------------------------------------------------*/
 
 __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int CO){
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -72,9 +67,15 @@ __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int
 }
 
 
+/* ----------------------------------------------------------------------------------------------------------------------------------------------
+    
+                                                                Function to process the image
+
+    ------------------------------------------------------------------------------------------------------------------------------------------------*/
 
 
-int main(){
+
+cv::Mat GetResult(std::string imagePath) {
     /* ----------------------------------------------------------------------------------------------------------------------------------------------
     
                                                                         OpenCV Setup
@@ -181,8 +182,42 @@ int main(){
     cv::Mat gxyResult;
     cv::merge(std::vector<cv::Mat>{Bluegxy, Greengxy, Redgxy}, gxyResult);
     
-    //Save the result
-    cv::imwrite("./output/result.jpg", gxyResult);
+    return gxyResult;
+}
+
+
+
+namespace fs = std::filesystem;
+
+/* ----------------------------------------------------------------------------------------------------------------------------------------------
     
+                                                                    Main Function
+
+    ------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+int main() {
+    fs::path input_dir = "./input"; // Directory containing the input images
+    fs::path output_dir = "./output"; // Directory to save the processed images
+    // Create the output directory if it doesn't exist
+    if (!fs::exists(output_dir)) {
+        fs::create_directories(output_dir);
+    }
+    for (const auto& subdir_entry : fs::directory_iterator(input_dir)){
+        if (subdir_entry.is_directory()) {
+            fs::path subdir_path = subdir_entry.path();
+            for (const auto& file_entry : fs::directory_iterator(subdir_path)) {
+                if (file_entry.is_regular_file() && file_entry.path().extension() == ".jpg") {
+                    std::cout << "Processing image: " << file_entry.path() << std::endl;
+                    cv::Mat result = GetResult(file_entry.path().string());
+                    // Save the result to the output directory
+                    fs::path output_path = output_dir / subdir_path.filename() / file_entry.path().filename();
+                    // Create the subdirectory in the output directory if it doesn't exist
+                    fs::create_directories(output_path.parent_path());
+                    cv::imwrite(output_path.string(), result);
+                    std::cout << "Saved result to: " << output_path << std::endl;
+                }
+            }
+        }
+    }
     return 0;
 }
