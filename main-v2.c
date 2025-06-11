@@ -3,19 +3,19 @@
 #include <string.h>
 #include <math.h>
 #include "mpi.h"
-#define MATRIX_DIM 15
-#define MAX_LINE_LENGTH 1024 // Maximum length of a line in the CSV file
+#define MATRIX_DIM 2000
+#define MAX_LINE_LENGTH 10000 // Maximum length of a line in the CSV file
 #define MATRIX_SIZE (MATRIX_DIM * MATRIX_DIM)
-#define MAX_PROCESSES 4 // Maximum number of processes for the Cartesian grid
+#define MAX_PROCESSES 4  // Maximum number of processes for the Cartesian grid
 
 void print_matrix(int* matrix, int dim) {
     for (int r = 0; r < dim; r++) {
         for (int c = 0; c < dim; c++) {
-           //printf("%d ", matrix[r * dim + c]);
+           printf("%d ", matrix[r * dim + c]);
         }
-       //printf("\n");
+       printf("\n");
     }
-   //printf("\n");
+   printf("\n");
 }
 
 void multiply_add(int* A, int* B, int* C, int subm_dimensions) {
@@ -49,8 +49,10 @@ int read_matrix_from_csv(int* matrix, const char* filename, int total_dim) {
         char* token = strtok(line, ",");
         int col = 0;
 
+	printf("line %d: %s", row, line);
         // Fill the first original_dim columns with actual values
         while (col < MATRIX_DIM && token) {
+
             matrix[row * total_dim + col] = atoi(token);
             token = strtok(NULL, ",");
             col++;
@@ -101,7 +103,7 @@ int main(int argc, char** argv) {
     // check if the number of processes is less than or equal to MAX_PROCESSES
     if (size < MAX_PROCESSES) {
         if (rank == 0) {
-           //printf("Error: The number of processes must be at least %d.\n", MAX_PROCESSES);
+           printf("Error: The number of processes must be at least %d.\n", MAX_PROCESSES);
         }
         MPI_Finalize();
         return -1;
@@ -109,7 +111,7 @@ int main(int argc, char** argv) {
     // Check if the number of processes is a perfect square
     if(sqrt(MAX_PROCESSES) != (int)sqrt(MAX_PROCESSES)) {
         if (rank == 0) {
-           //printf("Error: The number of processes must be a perfect square.\n");
+           printf("Error: The number of processes must be a perfect square.\n");
         }
         MPI_Finalize();
         return -1;
@@ -125,11 +127,11 @@ int main(int argc, char** argv) {
     if(MATRIX_DIM % MAX_PROCESSES != 0) {
         pad = ((MATRIX_DIM + P - 1) / P) * P - MATRIX_DIM; // Calculate padding to make it divisible by p_dim
     }
-   //printf("Padding: %d\n", pad);
+   printf("Padding: %d\n", pad);
     int total_dim = MATRIX_DIM + pad; // Total dimensions after padding
-   //printf("Total dimensions after padding: %d\n", total_dim);
+   printf("Total dimensions after padding: %d\n", total_dim);
     subm_dim = (MATRIX_DIM + pad) / P; // Calculate the dimensions of the sub-matrix
-   //printf("Sub-matrix dimensions: %d\n", subm_dim);
+   printf("Sub-matrix dimensions: %d\n", subm_dim);
     //creation of the sub-matrices for each process
     int *tempA = calloc(subm_dim * subm_dim, sizeof(int));
     int *tempB = calloc(subm_dim * subm_dim, sizeof(int));
@@ -147,14 +149,14 @@ int main(int argc, char** argv) {
     int reorder = 0;
     int code = MPI_Cart_create(MPI_COMM_WORLD, 2, dims, periods, reorder, &cart_comm);
     if (code != MPI_SUCCESS) {
-       //printf("Error creating Cartesian communicator\n");
+       printf("Error creating Cartesian communicator\n");
         MPI_Finalize();
         return -1;
     }
     int coords[2];
     if(rank == 0){
         int* matrixA = calloc(total_dim * total_dim, sizeof(int));
-       //printf("0. Matrix A reading from CSV:\n");
+       printf("0. Matrix A reading from CSV:\n");
         print_matrix(matrixA, total_dim);
         int* matrixB = calloc(total_dim * total_dim, sizeof(int));
 
@@ -167,9 +169,9 @@ int main(int argc, char** argv) {
         }
 
         // Print the matrices for debugging
-       //printf("1. Matrix A:\n");
+       printf("1. Matrix A:\n");
         print_matrix(matrixA, total_dim);
-       //printf("2. Matrix B:\n");
+       printf("2. Matrix B:\n");
         print_matrix(matrixB, total_dim);
 
         //Send the sub-matrices to each process
@@ -187,7 +189,7 @@ int main(int argc, char** argv) {
             // Send the submatrix structure to the process
             MPI_Send(tempA, subm_dim * subm_dim, MPI_INT, i, 1, MPI_COMM_WORLD);
             MPI_Send(tempB, subm_dim * subm_dim, MPI_INT, i, 1, MPI_COMM_WORLD);
-           //printf("3. Process 0 sending submatrix to process %d\n", i);
+           printf("3. Process 0 sending submatrix to process %d\n", i);
         }
 
         // Copy the sub-matrix for process 0
@@ -208,29 +210,29 @@ int main(int argc, char** argv) {
         // Receive the sub-matrices for each process
         MPI_Recv(tempA, subm_dim * subm_dim, MPI_INT, 0, 1, MPI_COMM_WORLD, &Stat);
         MPI_Recv(tempB, subm_dim * subm_dim, MPI_INT, 0, 1, MPI_COMM_WORLD, &Stat);
-       //printf("4. Process %d received submatrix\n", rank);
+       printf("4. Process %d received submatrix\n", rank);
     }
 
     if(rank < MAX_PROCESSES){
         // Get the coordinates of the process in the Cartesian grid
         MPI_Cart_coords(cart_comm, rank, 2, coords);
-       //printf("5. Rank %d: dims = (%d, %d), periods = (%d, %d), coords = (%d, %d)\n",
-        //rank, dims[0], dims[1], periods[0], periods[1], coords[0], coords[1]);
+       printf("5. Rank %d: dims = (%d, %d), periods = (%d, %d), coords = (%d, %d)\n",
+        rank, dims[0], dims[1], periods[0], periods[1], coords[0], coords[1]);
 
         for (int i = 0; i < coords[0]; i++) {
             int left, right;
             MPI_Cart_shift(cart_comm, 1, -1, &right, &left);
             MPI_Sendrecv_replace(tempA, subm_dim * subm_dim, MPI_INT, left, 0, right, 0, cart_comm, MPI_STATUS_IGNORE);
         }
-       //printf("Submatrix A, rank %d before shift:\n", rank);
+       printf("Submatrix A, rank %d before shift:\n", rank);
         print_matrix(tempA, subm_dim);
-       //printf("Submatrix B, rank %d before shift:\n", rank);
+       printf("Submatrix B, rank %d before shift:\n", rank);
         print_matrix(tempB, subm_dim);
-       //printf("6. Process %d: shifting left from %d to %d\n", rank, left, right);
+       printf("6. Process %d: shifting left from %d to %d\n", rank, left, right);
         // MPI_Sendrecv_replace(tempA, subm_dim * subm_dim, MPI_INT, left, 0, right, 0, cart_comm, MPI_STATUS_IGNORE);
-       //printf("Submatrix A, rank %d after shift:\n", rank);
+       printf("Submatrix A, rank %d after shift:\n", rank);
         print_matrix(tempA, subm_dim);
-       //printf("Submatrix B, rank %d after shift:\n", rank);
+       printf("Submatrix B, rank %d after shift:\n", rank);
         print_matrix(tempB, subm_dim);
 
         for (int i = 0; i < coords[1]; i++) {
@@ -239,7 +241,7 @@ int main(int argc, char** argv) {
             MPI_Sendrecv_replace(tempB, subm_dim * subm_dim, MPI_INT, up, 0, down, 0, cart_comm, MPI_STATUS_IGNORE);
         }
         // MPI_Cart_shift(cart_comm, 0, coords[1], &up, &down);
-       //printf("7. Process %d: shifting up from %d to %d\n", rank, up, down);
+       printf("7. Process %d: shifting up from %d to %d\n", rank, up, down);
         // MPI_Sendrecv_replace(tempB, subm_dim * subm_dim, MPI_INT, up, 0, down, 0, cart_comm, MPI_STATUS_IGNORE);
 
         for (int step = 0; step < P; step++) {
@@ -256,7 +258,7 @@ int main(int argc, char** argv) {
 
         if (rank != 0 && rank < MAX_PROCESSES) {
             MPI_Send(tempC, subm_dim * subm_dim, MPI_INT, 0, 2, MPI_COMM_WORLD);
-           //printf("8. I am process %d, sending submatrix to process 0\n", rank);
+           printf("8. I am process %d, sending submatrix to process 0\n", rank);
         }
         else{
             int* matrixC = calloc(total_dim * total_dim, sizeof(int));
@@ -283,11 +285,11 @@ int main(int argc, char** argv) {
                 }
                 free(temp_buffer);
             }
-           //printf("Matrix C:\n");
+           printf("Matrix C:\n");
             print_matrix(matrixC, total_dim);
             //store the result in a CSV file
             output_matrix_to_csv(matrixC, "matrixC.csv", total_dim);
-           //printf("Matrix C written to matrixC.csv\n");
+           printf("Matrix C written to matrixC.csv\n");
             free(matrixC);
 
         }
