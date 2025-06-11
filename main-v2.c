@@ -30,9 +30,8 @@ void multiply_add(int* A, int* B, int* C, int subm_dimensions) {
 
 int compute_start_index(int total, int coord, int dims) {
     int base  = total / dims;
-    int remainder = total % dims;
     // printf("Base size: %d\n,Remainder: %d\n, Returning index: %d\n", base,remainder, coord * base + (coord < remainder ? coord : remainder));
-    return coord * base + (coord < remainder ? coord : remainder);
+    return coord * base
 }
 
 //returns 0 on success, -1 on failure
@@ -89,17 +88,18 @@ int output_matrix_to_csv(int* matrix, const char* filename, int total_dim) {
 }
 
 int main(int argc, char** argv) {
-    /**
-     * definition of the Communication world
-     */
-
+    /***************************************************************************************************************************************************
+     *
+     *                                                               MPI Setup
+     *    
+     ***************************************************************************************************************************************************/
     
-     
     int rank, size;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Status Stat;
+
     // check if the number of processes is less than or equal to MAX_PROCESSES
     if (size < MAX_PROCESSES) {
         if (rank == 0) {
@@ -121,12 +121,14 @@ int main(int argc, char** argv) {
     
     //padding to make the matrix dimensions divisible by P
     int pad = 0;
+
     //Dimensions of the sub-matrix after the padding of the original matrix
     int subm_dim = 0;
     
     if(MATRIX_DIM % MAX_PROCESSES != 0) {
         pad = ((MATRIX_DIM + P - 1) / P) * P - MATRIX_DIM; // Calculate padding to make it divisible by p_dim
     }
+
     printf("Padding: %d\n", pad);
     int total_dim = MATRIX_DIM + pad; // Total dimensions after padding
     printf("Total dimensions after padding: %d\n", total_dim);
@@ -143,6 +145,7 @@ int main(int argc, char** argv) {
     /*
      *Creation of the Cartesian grid 
      */
+
     MPI_Comm cart_comm;
     int dims[2] = {P, P}; // Dimensions of the Cartesian grid
     int periods[2] = {1,1}; // Periodicity in each dimension (0 for non-periodic)
@@ -153,13 +156,22 @@ int main(int argc, char** argv) {
         MPI_Finalize();
         return -1;
     }
+
     int coords[2];
-    if(rank == 0){
+
+    /************************************************************************************************************************************************
+     * 
+     *                                                                  Master
+     *
+     ************************************************************************************************************************************************/
+    
+     if(rank == 0){
         int* matrixA = calloc(total_dim * total_dim, sizeof(int));
         printf("0. Matrix A reading from CSV:\n");
         print_matrix(matrixA, total_dim);
         int* matrixB = calloc(total_dim * total_dim, sizeof(int));
 
+        //Check if the matrices are read correctly from the CSV files
         if (read_matrix_from_csv(matrixA, "matrixA.csv", total_dim) == -1 || read_matrix_from_csv(matrixB, "matrixB.csv", total_dim) == -1) {
             fprintf(stderr, "Error reading matrices from CSV files.\n");
             free(matrixA);
@@ -206,6 +218,12 @@ int main(int argc, char** argv) {
         free(matrixA);
         free(matrixB);
     }
+
+    /************************************************************************************************************************************************
+     * 
+     *                                                                  Worker
+     *
+     ************************************************************************************************************************************************/
     else if(rank < MAX_PROCESSES){
         // Receive the sub-matrices for each process
         MPI_Recv(tempA, subm_dim * subm_dim, MPI_INT, 0, 1, MPI_COMM_WORLD, &Stat);

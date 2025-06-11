@@ -13,4 +13,5 @@ def generate_random_matrix_csv(n, filename, min_val=0, max_val=100):
     print(f"Random {n}x{n} matrix saved to '{filename}'.")
 
 # Example usage:
-generate_random_matrix_csv(2000, 'matrix.csv')
+generate_random_matrix_csv(2000, 'matrixA.csv')
+generate_random_matrix_csv(2000, 'matrixB.csv')
