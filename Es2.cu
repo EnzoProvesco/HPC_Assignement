@@ -41,6 +41,7 @@ cv::Mat createG_x_y_Matrix(int channelId, float* gxy, int C, int R){
 ------------------------------------------------------------------------------------------------------------------------------------------*/
 
 __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int CO){
+
     // 1. Dichiara la tile in memoria condivisa usando le costanti
     __shared__ float tile[TILE_DIM + 2 * HALO_SIZE][TILE_DIM + 2 * HALO_SIZE];
 
@@ -177,10 +178,25 @@ cv::Mat GetResult(std::string imagePath) {
     cudaMemcpy(channel, channel_host.data(), 3 * channels[0].rows * channels[0].cols * sizeof(float), cudaMemcpyHostToDevice);
     // copy the all 0s matrix that host the processed data
     cudaMemcpy(gxy, gxy_channels.data(), 3 * channels[0].rows * channels[0].cols * sizeof(float), cudaMemcpyHostToDevice);
-    
+    //time measurement
+    cudaEvent_t start_event, stop_event;
+    cudaEventCreate(&start_event);
+    cudaEventCreate(&stop_event);
+
     // Launch the kernel to calculate gxy for each channel
+    cudaEventRecord(start_event);
     g_x_y_calculation<<<numBlocks, threadsPerBlock>>>(channel, gxy, 3, channels[0].rows, channels[0].cols);
-    
+    cudaEventRecord(stop_event);
+    cudaEventSynchronize(stop_event);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start_event, stop_event);
+    std::cout << "Kernel execution time: " << milliseconds << " ms" << std::endl;
+
+    cudaEventDestroy(start_event);
+    cudaEventDestroy(stop_event);
+
+
 
     /*-----------------------------------------------------------------------------------------------------------------------------------------------
                                                                         
