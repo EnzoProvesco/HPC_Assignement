@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <chrono>
 #include <cuda_runtime.h>
+#define TILE_DIM 16  // Dimensione del blocco di thread (es. 16x16)
+#define HALO_SIZE 1  // Dimensione dell'halo per un kernel 3x
 
 /*----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -39,8 +41,7 @@ cv::Mat createG_x_y_Matrix(int channelId, float* gxy, int C, int R){
 ------------------------------------------------------------------------------------------------------------------------------------------*/
 
 __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int CO, const int nThreads){
-    const int HALO_SIZE = 1; // Size of the halo for a 3x3 kernel
-    __shared__ float tile[nThreads + 2*HALO_SIZE][nThreads + 2*HALO_SIZE]; // Shared memory tile with padding for Halo exchange
+    __shared__ float tile[TILE_DIM + 2*HALO_SIZE][TILE_DIM + 2*HALO_SIZE]; // Shared memory tile with padding for Halo exchange
 
     // Calculate thread indices
     int tx = threadIdx.x; // Thread's x-index within the block (0 to 15)
