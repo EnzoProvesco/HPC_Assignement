@@ -48,7 +48,7 @@ def main():
     
     # Create a new filename for the noisy image
     base_name = os.path.basename(image_path)
-    output_filename = f'noisy{amount}_' + base_name
+    output_filename = f'./input/noise{amount}/noisy{amount}_' + base_name
     cv2.imwrite(output_filename, noisy_img)
     print(f"Saved noisy image as {output_filename}")
 
