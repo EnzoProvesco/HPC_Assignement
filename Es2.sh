@@ -24,10 +24,12 @@ nvcc Es2.cu -o Es2 \
 # Run for each image in noise directory
 for img in "$INPUT_DIR"/*.jpg; do
     if [ -f "$img" ]; then
-        echo "----------------------------------------------"
-        echo "             Processing $img"
-        echo "----------------------------------------------\n\n"
-        ./Es2 "$INPUT_DIR"/"$img" "$OUTPUT_DIR"/BLUR"$img"
+        echo "----------------------------------------------------------------------------------------------"
+        echo "                 Processing $img"
+        echo "----------------------------------------------------------------------------------------------"
+        img_directory=$(dirname "$img")
+        img_filename=$(basename "$img")
+        ./Es2 "$INPUT_DIR"/$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename"
     else
         echo "No images found in $INPUT_DIR."
     fi

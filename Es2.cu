@@ -277,5 +277,6 @@ int main(int argc, char** argv) {
         std::cout << "Saving result to: " << argv[i+1] << std::endl;
         cv::imwrite(argv[i+1], result);
     }
+    
     return 0;
 }
