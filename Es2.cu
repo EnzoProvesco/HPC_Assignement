@@ -12,6 +12,7 @@
 ------------------------------------------------------------------------------------------------------------------------------------------*/
 
 cv::Mat createG_x_y_Matrix(int channelId, float* gxy, int C, int R){
+    
     cv::Mat gxy_cpu, tempMat;
     cv::Mat gxy_normalized, gxy_8U;
     std::vector<float> temp(3 * R * C);
@@ -37,34 +38,85 @@ cv::Mat createG_x_y_Matrix(int channelId, float* gxy, int C, int R){
 
 ------------------------------------------------------------------------------------------------------------------------------------------*/
 
-__global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int CO){
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-    int z = blockIdx.z * blockDim.z + threadIdx.z; //channel index
+__global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int CO, int nThreads){
+    __shared__ float tile[nThreads + 2][nThreads + 2]; // Shared memory tile with padding for Halo exchange
 
+    // Calculate thread indices
+    int tx = threadIdx.x; // Thread's x-index within the block (0 to 15)
+    int ty = threadIdx.y; // Thread's y-index within the block (0 to 15)
+    int z = blockIdx.z;   // Channel index
 
-    int idx = z * (R * CO) + y * CO + x;
-    if (x >= CO || y >= R || z >= CH) return;
+    // Calculate the top-left corner of the tile this thread will help load
+    int x_start_in = blockIdx.x * TILE_DIM - HALO_SIZE;
+    int y_start_in = blockIdx.y * TILE_DIM - HALO_SIZE;
 
-    if (x <= 0 || x >= CO - 1 || y <= 0 || y >= R - 1) {
-        gxy[idx] = 0.0;
-        return;
+    // Each thread loads one pixel into the shared memory tile.
+    // We calculate the source coordinates in the global 'channel' buffer.
+    int x_in = x_start_in + tx;
+    int y_in = y_start_in + ty;
+
+    // Cooperatively load data from global to shared memory
+    // Check image boundaries before loading. If out of bounds, pad with 0.
+    if (x_in >= 0 && x_in < CO && y_in >= 0 && y_in < R) {
+        tile[ty][tx] = channel[z * (R * CO) + y_in * CO + x_in];
+    } else {
+        tile[ty][tx] = 0.0f;
     }
-
-    int W[3][3] = {
-        {1, 2, 1},
-        {3, 4, 3},
-        {1, 2, 1}
-    };
-
-    float sum = 0.0f;
-
-    for (int i = 0; i < 3; i++){
-        for (int j = 0; j < 3; j++) {
-            sum += (1.0/16.0) *  W[i][j] * channel[idx + (i - 1) * CO + (j - 1)];
+    // To fill the entire 18x18 tile with a 16x16 block, some threads must load more than one pixel.
+    // Here, we handle the right and bottom halo edges.
+    // Load right halo columns
+    if (tx < 2 * HALO_SIZE) {
+        x_in = x_start_in + TILE_DIM + tx;
+        if (x_in >= 0 && x_in < CO && y_in >= 0 && y_in < R) {
+            tile[ty][tx + TILE_DIM] = channel[z * (R * CO) + y_in * CO + x_in];
+        } else {
+            tile[ty][tx + TILE_DIM] = 0.0f;
         }
     }
-    gxy[idx] = sum;
+    // Load bottom halo rows
+    if (ty < 2 * HALO_SIZE) {
+        y_in = y_start_in + TILE_DIM + ty;
+        if (y_in >= 0 && y_in < R && x_in >= 0 && x_in < CO) {
+            tile[ty + TILE_DIM][tx] = channel[z * (R * CO) + y_in * CO + x_in];
+        } else {
+            tile[ty + TILE_DIM][tx] = 0.0f;
+        }
+    }
+
+    // Synchronize threads
+    // This barrier ensures that the entire tile is loaded into shared memory
+    // before any thread proceeds to the computation phase.
+    __syncthreads();
+
+    // Compute the convolution from shared memory
+    // Calculate the global output coordinates for this thread
+    int x_out = blockIdx.x * TILE_DIM + tx;
+    int y_out = blockIdx.y * TILE_DIM + ty;
+
+    // Ensure the output pixel is within the image bounds
+    if (x_out < CO && y_out < R) {
+        // Handle image borders (set to 0)
+        if (x_out == 0 || x_out >= CO - 1 || y_out == 0 || y_out >= R - 1) {
+            gxy[z * (R * CO) + y_out * CO + x_out] = 0.0f;
+        } else {
+            // The kernel weights (could be moved to __constant__ memory for another small boost)
+            int W[3][3] = {{1, 2, 1}, {3, 4, 3}, {1, 2, 1}};
+            float sum = 0.0f;
+
+            // The thread's position in the shared memory tile corresponds to the center of its 3x3 window
+            int shared_y = ty + HALO_SIZE;
+            int shared_x = tx + HALO_SIZE;
+
+            // Loop over the 3x3 kernel, reading from the fast shared memory tile
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    sum += (1.0f / 16.0f) * W[i][j] * tile[shared_y + i - HALO_SIZE][shared_x + j - HALO_SIZE];
+                }
+            }
+            // Write the final result back to global memory
+            gxy[z * (R * CO) + y_out * CO + x_out] = sum;
+        }
+    }
 }
 
 
@@ -145,7 +197,7 @@ cv::Mat GetResult(std::string imagePath) {
     cudaMemcpy(gxy, gxy_channels.data(), 3 * channels[0].rows * channels[0].cols * sizeof(float), cudaMemcpyHostToDevice);
     
     // Launch the kernel to calculate gxy for each channel
-    g_x_y_calculation<<<numBlocks, threadsPerBlock>>>(channel, gxy, 3, channels[0].rows, channels[0].cols);
+    g_x_y_calculation<<<numBlocks, threadsPerBlock>>>(channel, gxy, 3, channels[0].rows, channels[0].cols, nThreads);
     
 
     /*-----------------------------------------------------------------------------------------------------------------------------------------------
