@@ -277,7 +277,7 @@ int main(int argc, char** argv) {
         std::cout << "Saving result to: " << argv[i+1] << std::endl;
         cv::imwrite(argv[i+1], result);
     }
-/*
+
     for (const auto& subdir_entry : fs::directory_iterator(input_dir)){
         if (subdir_entry.is_directory()) {
             fs::path subdir_path = subdir_entry.path();
@@ -295,6 +295,6 @@ int main(int argc, char** argv) {
             }
         }
     }
-*/
+
     return 0;
 }
