@@ -10,4 +10,4 @@ nvcc Es2.cu -o Es2 \
   -lopencv_core -lopencv_imgcodecs -lopencv_highgui -lopencv_imgproc \
   -lstdc++ -lcudart
 
-./Es2 ./input/reference/pexels-christian-heitz.jpg ./output/reference/pexels-christian-heitz.jpg
+./Es2 -s ./input/reference/pexels-christian-heitz.jpg ./output/reference/pexels-christian-heitz.jpg
