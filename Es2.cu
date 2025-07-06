@@ -38,7 +38,7 @@ cv::Mat createG_x_y_Matrix(int channelId, float* gxy, int C, int R){
 
 ------------------------------------------------------------------------------------------------------------------------------------------*/
 
-__global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int CO, int nThreads){
+__global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int CO, const int nThreads){
     const int HALO_SIZE = 1; // Size of the halo for a 3x3 kernel
     __shared__ float tile[nThreads + 2*HALO_SIZE][nThreads + 2*HALO_SIZE]; // Shared memory tile with padding for Halo exchange
 
