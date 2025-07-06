@@ -3,12 +3,20 @@
 #include <string.h>
 #include <math.h>
 #include "mpi.h"
+#include <sys/resource.h>
+#include <malloc.h>
 
 #define PRINTS 0
-#define MATRIX_DIM 100 // Dimension of the original matrix (MATRIX_DIM x MATRIX_DIM)
 #define MAX_LINE_LENGTH 10000 // Maximum length of a line in the CSV file
-#define MATRIX_SIZE (MATRIX_DIM * MATRIX_DIM)
-#define MAX_PROCESSES 4  // Maximum number of processes for the Cartesian grid
+#ifndef MATRIX_DIM  // Dimension of the original matrix (MATRIX_DIM x MATRIX_DIM)
+#define MATRIX_DIM 100
+#endif
+
+#ifndef MAX_PROCESSES   // Maximum number of processes for the Cartesian grid
+#define MAX_PROCESSES 4
+#endif
+
+#define MATRIX_SIZE (MATRIX_DIM * MATRIX_DIM) 
 
 void print_matrix(int* matrix, int dim) {
     for (int r = 0; r < dim; r++) {
@@ -100,13 +108,28 @@ int main(int argc, char** argv) {
     /**
      * definition of the Communication world
      */
-
     
+    // Initialize the resource usage structure and timing variables
+    // This will be used to measure the resource usage of the program
+
+    struct rusage usage_start, usage_end;
+    double time_end, time_start;
+
+    // Get the initial resource usage
+    // This will capture the resource usage at the start of the program
+    getrusage(RUSAGE_SELF, &usage_start);
 
     int rank, size;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (rank == 0) {
+        time_start = MPI_Wtime();
+        getrusage(RUSAGE_SELF, &usage_start);
+    }
+
     MPI_Status Stat;
     // check if the number of processes is less than or equal to MAX_PROCESSES
     if (size < MAX_PROCESSES) {
@@ -323,6 +346,8 @@ int main(int argc, char** argv) {
                         matrixC[(start_row + r) * total_dim + start_column + c] = temp_buffer[r * subm_dim + c];
                     }
                 }
+
+
                 free(temp_buffer);
             }
 
@@ -338,8 +363,35 @@ int main(int argc, char** argv) {
 
         }
     }
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (rank == 0) {
+        
+        time_end = MPI_Wtime();
+        getrusage(RUSAGE_SELF, &usage_end);
 
+        double user_time = (usage_end.ru_utime.tv_sec - usage_start.ru_utime.tv_sec) +
+            (usage_end.ru_utime.tv_usec - usage_start.ru_utime.tv_usec) / 1e6;
+
+        double sys_time = (usage_end.ru_stime.tv_sec - usage_start.ru_stime.tv_sec) +
+            (usage_end.ru_stime.tv_usec - usage_start.ru_stime.tv_usec) / 1e6;
+        
+        FILE* f = fopen("performance_log.csv", "a");
+        if (!f) {
+            fprintf(stderr, "Error opening performance_log.csv for writing.\n");
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        // Write header if file is empty
+        fseek(f, 0, SEEK_END);
+        if (ftell(f) == 0) {
+            fprintf(f, "processes,matrix size,elapsed_time_sec,user_cpu_sec,sys_cpu_sec,max_rss_kb,#context_switch\n");
+        }
+        fprintf(f, "%d,%d,%.6f,%.6f,%.6f,%ld,%ld\n",MAX_PROCESSES,MATRIX_SIZE, time_end - time_start, user_time, sys_time, usage_end.ru_maxrss, usage_end.ru_nivcsw);
+        fclose(f);
+    }
     MPI_Finalize();
+
     free(tempA);
     free(tempB);
     free(tempC);
