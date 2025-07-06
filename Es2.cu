@@ -40,7 +40,7 @@ cv::Mat createG_x_y_Matrix(int channelId, float* gxy, int C, int R){
 
 ------------------------------------------------------------------------------------------------------------------------------------------*/
 
-__global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int CO, const int nThreads){
+__global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int CO, const int TILE_DIM){
     __shared__ float tile[TILE_DIM + 2*HALO_SIZE][TILE_DIM + 2*HALO_SIZE]; // Shared memory tile with padding for Halo exchange
 
     // Calculate thread indices
@@ -49,8 +49,8 @@ __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int
     int z = blockIdx.z;   // Channel index
 
     // Calculate the top-left corner of the tile this thread will help load
-    int x_start_in = blockIdx.x * nThreads - HALO_SIZE;
-    int y_start_in = blockIdx.y * nThreads - HALO_SIZE;
+    int x_start_in = blockIdx.x * TILE_DIM - HALO_SIZE;
+    int y_start_in = blockIdx.y * TILE_DIM - HALO_SIZE;
 
     // Each thread loads one pixel into the shared memory tile.
     // We calculate the source coordinates in the global 'channel' buffer.
@@ -68,20 +68,20 @@ __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int
     // Here, we handle the right and bottom halo edges.
     // Load right halo columns
     if (tx < 2 * HALO_SIZE) {
-        x_in = x_start_in + nThreads + tx;
+        x_in = x_start_in + TILE_DIM + tx;
         if (x_in >= 0 && x_in < CO && y_in >= 0 && y_in < R) {
-            tile[ty][tx + nThreads] = channel[z * (R * CO) + y_in * CO + x_in];
+            tile[ty][tx + TILE_DIM] = channel[z * (R * CO) + y_in * CO + x_in];
         } else {
-            tile[ty][tx + nThreads] = 0.0f;
+            tile[ty][tx + TILE_DIM] = 0.0f;
         }
     }
     // Load bottom halo rows
     if (ty < 2 * HALO_SIZE) {
-        y_in = y_start_in + nThreads + ty;
+        y_in = y_start_in + TILE_DIM + ty;
         if (y_in >= 0 && y_in < R && x_in >= 0 && x_in < CO) {
-            tile[ty + nThreads][tx] = channel[z * (R * CO) + y_in * CO + x_in];
+            tile[ty + TILE_DIM][tx] = channel[z * (R * CO) + y_in * CO + x_in];
         } else {
-            tile[ty + nThreads][tx] = 0.0f;
+            tile[ty + TILE_DIM][tx] = 0.0f;
         }
     }
 
@@ -92,8 +92,8 @@ __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int
 
     // Compute the convolution from shared memory
     // Calculate the global output coordinates for this thread
-    int x_out = blockIdx.x * nThreads + tx;
-    int y_out = blockIdx.y * nThreads + ty;
+    int x_out = blockIdx.x * TILE_DIM + tx;
+    int y_out = blockIdx.y * TILE_DIM + ty;
 
     // Ensure the output pixel is within the image bounds
     if (x_out < CO && y_out < R) {
@@ -158,8 +158,8 @@ cv::Mat GetResult(std::string imagePath) {
     // start the timer
     auto start = std::chrono::high_resolution_clock::now();
     // get the number of threads from the environment variable
-    const int nThreads = std::atoi(std::getenv("CUDA_N_THREADS"));
-    std::cout << "Thread used: " << nThreads * nThreads << std::endl;
+    const int TILE_DIM = std::atoi(std::getenv("CUDA_N_THREADS"));
+    std::cout << "Thread used: " << TILE_DIM * TILE_DIM << std::endl;
 
     // instatiate cv matrix from which you will get the data to be stored in CUDA memory
     std::vector<cv::Mat> ch32(3);
@@ -182,7 +182,7 @@ cv::Mat GetResult(std::string imagePath) {
     float *channel, *gxy;
 
     // Define the number of threads per block and the number of blocks
-    dim3 threadsPerBlock(nThreads, nThreads);
+    dim3 threadsPerBlock(TILE_DIM, TILE_DIM);
     dim3 numBlocks(
         (channels[0].cols + threadsPerBlock.x - 1) / threadsPerBlock.x,
         (channels[0].rows + threadsPerBlock.y - 1) / threadsPerBlock.y,
@@ -199,7 +199,7 @@ cv::Mat GetResult(std::string imagePath) {
     cudaMemcpy(gxy, gxy_channels.data(), 3 * channels[0].rows * channels[0].cols * sizeof(float), cudaMemcpyHostToDevice);
     
     // Launch the kernel to calculate gxy for each channel
-    g_x_y_calculation<<<numBlocks, threadsPerBlock>>>(channel, gxy, 3, channels[0].rows, channels[0].cols, nThreads);
+    g_x_y_calculation<<<numBlocks, threadsPerBlock>>>(channel, gxy, 3, channels[0].rows, channels[0].cols, TILE_DIM);
     
 
     /*-----------------------------------------------------------------------------------------------------------------------------------------------
