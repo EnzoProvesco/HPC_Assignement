@@ -143,10 +143,26 @@ cv::Mat GetResult(std::string imagePath) {
     cudaMemcpy(channel, channel_host.data(), 3 * channels[0].rows * channels[0].cols * sizeof(float), cudaMemcpyHostToDevice);
     // copy the all 0s matrix that host the processed data
     cudaMemcpy(gxy, gxy_channels.data(), 3 * channels[0].rows * channels[0].cols * sizeof(float), cudaMemcpyHostToDevice);
-    
+    cudaEvent_t start_event, stop_event;
+    cudaEventCreate(&start_event);
+    cudaEventCreate(&stop_event);
+
+    cudaEventRecord(start_event);
+
     // Launch the kernel to calculate gxy for each channel
     g_x_y_calculation<<<numBlocks, threadsPerBlock>>>(channel, gxy, 3, channels[0].rows, channels[0].cols);
     
+    cudaEventRecord(stop_event);
+
+    cudaEventSynchronize(stop_event);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start_event, stop_event);
+    std::cout << "Kernel execution time: " << milliseconds << " ms" << std::endl;
+
+    cudaEventDestroy(start_event);
+    cudaEventDestroy(stop_event);
+
 
     /*-----------------------------------------------------------------------------------------------------------------------------------------------
                                                                         
