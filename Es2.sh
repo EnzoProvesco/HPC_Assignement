@@ -1,8 +1,19 @@
+#!/bin/bash
+if [ "$#" -ne 2 ]; then
+    echo "Error: Incorrect number of arguments."
+    echo "Usage: $0 <input_directory> <output_directory>"
+    exit 1
+fi
+
+INPUT_DIR="$1"
+OUTPUT_DIR="$2"
+
 #mixto Compilation
 export PATH=/usr/local/cuda-11.4/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64:$LD_LIBRARY_PATH
 export CUDA_N_THREADS=32
 nvidia-smi
+echo "----------  Starting Compiling  ------------------"
 
 nvcc Es2.cu -o Es2 \
   -I/usr/include/opencv4 \
@@ -10,4 +21,14 @@ nvcc Es2.cu -o Es2 \
   -lopencv_core -lopencv_imgcodecs -lopencv_highgui -lopencv_imgproc \
   -lstdc++ -lcudart
 
-./Es2 -s ./input/reference/pexels-christian-heitz.jpg ./output/reference/pexels-christian-heitz.jpg
+# Run for each image in noise directory
+for img in "$INPUT_DIR"/*.jpg; do
+    if [ -f "$img" ]; then
+        echo "----------------------------------------------"
+        echo "             Processing $img"
+        echo "----------------------------------------------\n\n"
+        ./Es2 "$INPUT_DIR"/"$img" "$OUTPUT_DIR"/BLUR"$img"
+    else
+        echo "No images found in $INPUT_DIR."
+    fi
+done
