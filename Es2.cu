@@ -39,7 +39,8 @@ cv::Mat createG_x_y_Matrix(int channelId, float* gxy, int C, int R){
 ------------------------------------------------------------------------------------------------------------------------------------------*/
 
 __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int CO, int nThreads){
-    __shared__ float tile[nThreads + 2][nThreads + 2]; // Shared memory tile with padding for Halo exchange
+    const int HALO_SIZE = 1; // Size of the halo for a 3x3 kernel
+    __shared__ float tile[nThreads + 2*HALO_SIZE][nThreads + 2*HALO_SIZE]; // Shared memory tile with padding for Halo exchange
 
     // Calculate thread indices
     int tx = threadIdx.x; // Thread's x-index within the block (0 to 15)
@@ -47,8 +48,8 @@ __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int
     int z = blockIdx.z;   // Channel index
 
     // Calculate the top-left corner of the tile this thread will help load
-    int x_start_in = blockIdx.x * TILE_DIM - HALO_SIZE;
-    int y_start_in = blockIdx.y * TILE_DIM - HALO_SIZE;
+    int x_start_in = blockIdx.x * nThreads - HALO_SIZE;
+    int y_start_in = blockIdx.y * nThreads - HALO_SIZE;
 
     // Each thread loads one pixel into the shared memory tile.
     // We calculate the source coordinates in the global 'channel' buffer.
@@ -66,20 +67,20 @@ __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int
     // Here, we handle the right and bottom halo edges.
     // Load right halo columns
     if (tx < 2 * HALO_SIZE) {
-        x_in = x_start_in + TILE_DIM + tx;
+        x_in = x_start_in + nThreads + tx;
         if (x_in >= 0 && x_in < CO && y_in >= 0 && y_in < R) {
-            tile[ty][tx + TILE_DIM] = channel[z * (R * CO) + y_in * CO + x_in];
+            tile[ty][tx + nThreads] = channel[z * (R * CO) + y_in * CO + x_in];
         } else {
-            tile[ty][tx + TILE_DIM] = 0.0f;
+            tile[ty][tx + nThreads] = 0.0f;
         }
     }
     // Load bottom halo rows
     if (ty < 2 * HALO_SIZE) {
-        y_in = y_start_in + TILE_DIM + ty;
+        y_in = y_start_in + nThreads + ty;
         if (y_in >= 0 && y_in < R && x_in >= 0 && x_in < CO) {
-            tile[ty + TILE_DIM][tx] = channel[z * (R * CO) + y_in * CO + x_in];
+            tile[ty + nThreads][tx] = channel[z * (R * CO) + y_in * CO + x_in];
         } else {
-            tile[ty + TILE_DIM][tx] = 0.0f;
+            tile[ty + nThreads][tx] = 0.0f;
         }
     }
 
@@ -90,8 +91,8 @@ __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int
 
     // Compute the convolution from shared memory
     // Calculate the global output coordinates for this thread
-    int x_out = blockIdx.x * TILE_DIM + tx;
-    int y_out = blockIdx.y * TILE_DIM + ty;
+    int x_out = blockIdx.x * nThreads + tx;
+    int y_out = blockIdx.y * nThreads + ty;
 
     // Ensure the output pixel is within the image bounds
     if (x_out < CO && y_out < R) {
