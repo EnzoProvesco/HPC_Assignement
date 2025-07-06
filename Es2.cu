@@ -3,7 +3,6 @@
 #include <vector>
 #include <cstdlib>
 #include <chrono>
-#include <unistd.h>
 #include <cuda_runtime.h>
 #define TILE_DIM 16  // Dimensione del blocco di thread (es. 16x16)
 #define HALO_SIZE 1  // Dimensione dell'halo per un kernel 3x
@@ -250,25 +249,7 @@ cv::Mat GetResult(std::string imagePath) {
     ------------------------------------------------------------------------------------------------------------------------------------------------*/
 
 int main(int argc, char** argv) {
-    int deviceCount = 0, opt = 0;
-    bool sflag = false, mflag = false;
-
-    while((opt = getopt(argc, argv, "sm")) != -1) {
-        switch(opt) {
-            case 's':
-                sflag = true;
-                break;
-            case 'm':
-                mflag = true;
-                break;
-            default:
-                mflag = true;
-                return 1;
-        }
-    }
-
-
-
+    int deviceCount = 0;
     cudaGetDeviceCount(&deviceCount);
     for (int i = 0; i < deviceCount; ++i) {
         cudaDeviceProp prop;
@@ -290,34 +271,11 @@ int main(int argc, char** argv) {
     }
 
 
-    if (sflag){
-        std::cout << "Single image mode selected." << std::endl;
-        for (int i = 1; i < argc; i+=2) {
-            std::cout << "Processing image: " << argv[i] << std::endl;
-            cv::Mat result = GetResult(argv[i]);
-            std::cout << "Saving result to: " << argv[i+1] << std::endl;
-            cv::imwrite(argv[i+1], result);
-        }
-    }
-    else if (mflag) {
-        std::cout << "Multiple images mode selected." << std::endl;
-        for (const auto& subdir_entry : fs::directory_iterator(input_dir)){
-            if (subdir_entry.is_directory()) {
-                fs::path subdir_path = subdir_entry.path();
-                for (const auto& file_entry : fs::directory_iterator(subdir_path)) {
-                    if (file_entry.is_regular_file() && file_entry.path().extension() == ".jpg") {
-                        std::cout << "Processing image: " << file_entry.path() << std::endl;
-                        cv::Mat result = GetResult(file_entry.path().string());
-                        // Save the result to the output directory
-                        fs::path output_path = output_dir / subdir_path.filename() / file_entry.path().filename();
-                        // Create the subdirectory in the output directory if it doesn't exist
-                        fs::create_directories(output_path.parent_path());
-                        cv::imwrite(output_path.string(), result);
-                        std::cout << "Saved result to: " << output_path << std::endl;
-                    }
-                }
-            }
-        }
+    for (int i = 1; i < argc; i+=2) {
+        std::cout << "Processing image: " << argv[i] << std::endl;
+        cv::Mat result = GetResult(argv[i]);
+        std::cout << "Saving result to: " << argv[i+1] << std::endl;
+        cv::imwrite(argv[i+1], result);
     }
     return 0;
 }
