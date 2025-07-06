@@ -29,7 +29,7 @@ for img in "$INPUT_DIR"/*.jpg; do
         echo "----------------------------------------------------------------------------------------------"
         img_directory=$(dirname "$img")
         img_filename=$(basename "$img")
-        ./Es2 "$INPUT_DIR"/$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename"
+        ./Es2 "$INPUT_DIR"/"$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename"
     else
         echo "No images found in $INPUT_DIR."
     fi
