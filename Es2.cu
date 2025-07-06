@@ -139,7 +139,6 @@ cv::Mat GetResult(std::string imagePath) {
     // start the timer
     auto start = std::chrono::high_resolution_clock::now();
     // get the number of threads from the environment variable
-    const int TILE_DIM = std::atoi(std::getenv("CUDA_N_THREADS"));
     std::cout << "Thread used: " << TILE_DIM * TILE_DIM << std::endl;
 
     // instatiate cv matrix from which you will get the data to be stored in CUDA memory
@@ -180,7 +179,7 @@ cv::Mat GetResult(std::string imagePath) {
     cudaMemcpy(gxy, gxy_channels.data(), 3 * channels[0].rows * channels[0].cols * sizeof(float), cudaMemcpyHostToDevice);
     
     // Launch the kernel to calculate gxy for each channel
-    g_x_y_calculation<<<numBlocks, threadsPerBlock>>>(channel, gxy, 3, channels[0].rows, channels[0].cols, TILE_DIM);
+    g_x_y_calculation<<<numBlocks, threadsPerBlock>>>(channel, gxy, 3, channels[0].rows, channels[0].cols);
     
 
     /*-----------------------------------------------------------------------------------------------------------------------------------------------
