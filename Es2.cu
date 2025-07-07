@@ -128,7 +128,7 @@ cv::Mat GetResult(std::string imagePath, std::ofstream &logFile) {
         exit(EXIT_FAILURE);
     }  
     //image size
-    logFile << image.rows << ";" << image.cols << ";";
+    logFile << std::to_string(image.rows) << ";" << std::to_string(image.cols) << ";";
 
     std::vector<cv::Mat> channels;
     cv::split(image, channels);
@@ -193,7 +193,7 @@ cv::Mat GetResult(std::string imagePath, std::ofstream &logFile) {
 
     float milliseconds = 0;
     cudaEventElapsedTime(&milliseconds, start_event, stop_event);
-    logFile << milliseconds << ";";
+    logFile << std::to_string(milliseconds) << ";";
     std::cout << "Kernel execution time: " << milliseconds << " ms" << std::endl;
 
     cudaEventDestroy(start_event);
@@ -238,7 +238,7 @@ cv::Mat GetResult(std::string imagePath, std::ofstream &logFile) {
     // Calculate the elapsed time in milliseconds
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     std::cout << "Elapsed time: " << elapsed << " ms" << std::endl;
-    logFile << elapsed << "\n";
+    logFile << std::to_string(elapsed) << "\n";
     //Recombine the image
     cv::Mat gxyResult;
     cv::merge(std::vector<cv::Mat>{Bluegxy, Greengxy, Redgxy}, gxyResult);
