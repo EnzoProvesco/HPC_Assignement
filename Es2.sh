@@ -34,9 +34,11 @@ for img in "$INPUT_DIR"/*.jpg; do
         nsys profile \
         --trace=cuda \
         --cuda-memory-usage=true\
-        -o "$nsys_profile" \
+        -o ./nsysProfile/${img_filename}.nsys-rep \
         --force-overwrite true \
-        ./Es2 "$INPUT_DIR"/"$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename"        
+        ./Es2 "$INPUT_DIR"/"$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename"
+        
+        nsys stats -f csv -o ./nsysProfile/reportCSV/${img_filename} -r gpumemsizesum  ./nsysProfile/${img_filename}.nsys-rep
     else
         echo "No images found in $INPUT_DIR."
     fi
