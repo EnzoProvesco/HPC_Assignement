@@ -4,6 +4,8 @@
 #include <cstdlib>
 #include <chrono>
 #include <cuda_runtime.h>
+#include <string> 
+#include <fstream>
 #define TILE_DIM 16  // Dimensione del blocco di thread (es. 16x16)
 #define HALO_SIZE 1  // Dimensione dell'halo per un kernel 3x
 
@@ -255,6 +257,7 @@ cv::Mat GetResult(std::string imagePath, std::ofstream &logFile) {
 int main(int argc, char** argv) {
     int deviceCount = 0;
     cudaGetDeviceCount(&deviceCount);
+    std::ofstream logFile("logFile", std::ios::app);
     
     for (int i = 0; i < deviceCount; ++i) {
         cudaDeviceProp prop;
