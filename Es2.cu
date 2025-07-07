@@ -112,7 +112,7 @@ __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int
 
 
 
-cv::Mat GetResult(std::string imagePath) {
+cv::Mat GetResult(std::string imagePath, std::ofstream &logFile) {
     /* ----------------------------------------------------------------------------------------------------------------------------------------------
     
                                                                         OpenCV Setup
@@ -280,7 +280,7 @@ int main(int argc, char** argv) {
     for (int i = 1; i < argc; i+=2) {
         logFile << argv[1] <<";";
         std::cout << "Processing image: " << argv[i] << std::endl;
-        cv::Mat result = GetResult(argv[i]);
+        cv::Mat result = GetResult(argv[i], logFile);
         std::cout << "Saving result to: " << argv[i+1] << std::endl;
         cv::imwrite(argv[i+1], result);
         logFile <<"\n";
