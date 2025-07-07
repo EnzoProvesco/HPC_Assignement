@@ -127,6 +127,8 @@ cv::Mat GetResult(std::string imagePath) {
         std::cerr << "Error: Could not open or find the image!" << std::endl;
         exit(EXIT_FAILURE);
     }  
+    //image size
+    logFile << image.rows << ";" << image.cols << ";";
 
     std::vector<cv::Mat> channels;
     cv::split(image, channels);
@@ -141,7 +143,7 @@ cv::Mat GetResult(std::string imagePath) {
     auto start = std::chrono::high_resolution_clock::now();
     // get the number of threads from the environment variable
     std::cout << "Thread used: " << TILE_DIM * TILE_DIM << std::endl;
-
+    logFile << TILE_DIM * TILE_DIM << ";";
     // instatiate cv matrix from which you will get the data to be stored in CUDA memory
     std::vector<cv::Mat> ch32(3);
     std::vector<float> channel_host(3 * channels[0].rows * channels[0].cols);    
@@ -191,6 +193,7 @@ cv::Mat GetResult(std::string imagePath) {
 
     float milliseconds = 0;
     cudaEventElapsedTime(&milliseconds, start_event, stop_event);
+    logFile << milliseconds << ";";
     std::cout << "Kernel execution time: " << milliseconds << " ms" << std::endl;
 
     cudaEventDestroy(start_event);
@@ -235,6 +238,7 @@ cv::Mat GetResult(std::string imagePath) {
     // Calculate the elapsed time in milliseconds
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     std::cout << "Elapsed time: " << elapsed << " ms" << std::endl;
+    logFile << elapsed << "\n";
     //Recombine the image
     cv::Mat gxyResult;
     cv::merge(std::vector<cv::Mat>{Bluegxy, Greengxy, Redgxy}, gxyResult);
@@ -251,9 +255,11 @@ cv::Mat GetResult(std::string imagePath) {
 int main(int argc, char** argv) {
     int deviceCount = 0;
     cudaGetDeviceCount(&deviceCount);
+    
     for (int i = 0; i < deviceCount; ++i) {
         cudaDeviceProp prop;
         cudaGetDeviceProperties(&prop, i);
+        std::ofstream logFile("log.txt", std::ios::app);
 
         std::cout << "Dispositivo " << i << ": " << prop.name << std::endl;
         std::cout << "  Multiprocessori: " << prop.multiProcessorCount << std::endl;
@@ -272,10 +278,13 @@ int main(int argc, char** argv) {
 
 
     for (int i = 1; i < argc; i+=2) {
+        logFile << argv[1] <<";";
         std::cout << "Processing image: " << argv[i] << std::endl;
         cv::Mat result = GetResult(argv[i]);
         std::cout << "Saving result to: " << argv[i+1] << std::endl;
         cv::imwrite(argv[i+1], result);
+        logFile <<"\n";
+        std::cout << "Result saved successfully!" << std::endl;
     }
     
     return 0;
