@@ -9,6 +9,7 @@
 #define TILE_DIM 16  // Dimensione del blocco di thread (es. 16x16)
 #define HALO_SIZE 1  // Dimensione dell'halo per un kernel 3x
 
+
 /*----------------------------------------------------------------------------------------------------------------------------------------
 
                                              Function to get the image in order to visualize it 
@@ -34,7 +35,6 @@ cv::Mat createG_x_y_Matrix(int channelId, float* gxy, int C, int R){
     
     return gxy_8U;
 }
-
 
 /* ----------------------------------------------------------------------------------------------------------------------------------------
 

@@ -27,9 +27,16 @@ for img in "$INPUT_DIR"/*.jpg; do
         echo "----------------------------------------------------------------------------------------------"
         echo "                 Processing $img"
         echo "----------------------------------------------------------------------------------------------"
+
         img_directory=$(dirname "$img")
         img_filename=$(basename "$img")
-        ./Es2 "$INPUT_DIR"/"$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename"
+        echo "Running with nsys profiling..."
+        nsys profile \
+        --trace=cuda \
+        --cuda-memory-usage=true\
+        -o "$nsys_profile" \
+        --force-overwrite true \
+        ./Es2 "$INPUT_DIR"/"$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename"        
     else
         echo "No images found in $INPUT_DIR."
     fi
