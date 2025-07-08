@@ -22,24 +22,23 @@ nvcc Es2.cu -o Es2 \
   -lstdc++ -lcudart
 
 # Run for each image in noise directory
-for img in "$INPUT_DIR"/*.jpg; do
-    if [ -f "$img" ]; then
-        echo "----------------------------------------------------------------------------------------------"
-        echo "                 Processing $img"
-        echo "----------------------------------------------------------------------------------------------"
+counter=0
+for [$counter -lt 30]; do
+    for img in "$INPUT_DIR"/*.jpg; do
+        if [ -f "$img" ]; then
+            img_directory=$(dirname "$img")
+            img_filename=$(basename "$img")
+            echo "Running with nsys profiling..."
+            nsys profile \
+            --trace=cuda \
+            --cuda-memory-usage=true\
+            -o ./nsysProfile/${img_filename}.nsys-rep \
+            --force-overwrite true \
+            ./Es2 "$INPUT_DIR"/"$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename"
 
-        img_directory=$(dirname "$img")
-        img_filename=$(basename "$img")
-        echo "Running with nsys profiling..."
-        nsys profile \
-        --trace=cuda \
-        --cuda-memory-usage=true\
-        -o ./nsysProfile/${img_filename}.nsys-rep \
-        --force-overwrite true \
-        ./Es2 "$INPUT_DIR"/"$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename"
-
-        nsys stats -f csv -o ./nsysProfile/reportCSV/${img_filename} -r gpumemsizesum  ./nsysProfile/${img_filename}.nsys-rep
-    else
-        echo "No images found in $INPUT_DIR."
-    fi
+            nsys stats -f csv -o ./nsysProfile/reportCSV${counter}/${img_filename} -r gpumemsizesum  ./nsysProfile/${img_filename}.nsys-rep
+        else
+            echo "No images found in $INPUT_DIR."
+        fi
+    done
 done
