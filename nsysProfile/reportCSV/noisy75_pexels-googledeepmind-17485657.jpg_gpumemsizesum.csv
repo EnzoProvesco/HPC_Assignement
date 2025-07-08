@@ -1,0 +1,3 @@
+Total (MB),Count,Avg (MB),Med (MB),Min (MB),Max (MB),StdDev (MB),Operation
+"1023,984",3,"341,328","341,328","341,328","341,328","0,000",[CUDA memcpy DtoH]
+"682,656",2,"341,328","341,328","341,328","341,328","0,000",[CUDA memcpy HtoD]
