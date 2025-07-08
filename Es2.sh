@@ -40,6 +40,8 @@ while [ $counter -lt 30 ]; do
             ./Es2 "$INPUT_DIR"/"$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename" > /dev/null 2>&1
             mkdir -p ./nsysProfile/reportCSV${counter}
             nsys stats -f csv -o ./nsysProfile/reportCSV${counter}/${img_filename} -r gpumemsizesum  ./nsysProfile/${img_filename}.nsys-rep > /dev/null 2>&1
+            rm ./nsysProfile/${img_filename}.nsys-rep
+            rm ./nsysProfile/${img_filename}.sqlite
             counterimg=$((counterimg+1))
         else
             echo "No images found in $INPUT_DIR."
