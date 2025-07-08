@@ -282,12 +282,11 @@ int main(int argc, char** argv) {
     
         logFile << argv[1] <<";";
         //std::cout << "Processing image: " << argv[1] << std::endl;
-        cv::Mat result = GetResult(argv[i], logFile);
+        cv::Mat result = GetResult(argv[1], logFile);
         //std::cout << "Saving result to: " << argv[2] << std::endl;        
         if (if argc > 3 && argv[3] == std::string("-s")) {
             cv::imwrite(argv[2], result);
             std::cout << "Result saved successfully image"<< argv[1] << std::endl;
-
         }
 
         logFile <<"\n";
