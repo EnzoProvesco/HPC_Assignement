@@ -11,8 +11,6 @@ OUTPUT_DIR="$2"
 #mixto Compilation
 export PATH=/usr/local/cuda-11.4/bin:$PATH
 export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64:$LD_LIBRARY_PATH
-export CUDA_N_THREADS=32
-nvidia-smi
 echo "----------  Starting Compiling  ------------------"
 
 nvcc Es2.cu -o Es2 \
@@ -40,7 +38,7 @@ while [ $counter -lt 30 ]; do
             -o ./nsysProfile/${img_filename}.nsys-rep \
             --force-overwrite true \
             ./Es2 "$INPUT_DIR"/"$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename" > /dev/null 2>&1
-
+            mkdir -p ./nsysProfile/reportCSV${counter}
             nsys stats -f csv -o ./nsysProfile/reportCSV${counter}/${img_filename} -r gpumemsizesum  ./nsysProfile/${img_filename}.nsys-rep > /dev/null 2>&1
             counterimg=$((counterimg+1))
         else
