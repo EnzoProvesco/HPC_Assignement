@@ -144,7 +144,7 @@ cv::Mat GetResult(std::string imagePath, std::ofstream &logFile) {
     // start the timer
     auto start = std::chrono::high_resolution_clock::now();
     // get the number of threads from the environment variable
-    std::cout << "Thread used: " << TILE_DIM * TILE_DIM << std::endl;
+    //std::cout << "Thread used: " << TILE_DIM * TILE_DIM << std::endl;
     logFile << TILE_DIM * TILE_DIM << ";";
     // instatiate cv matrix from which you will get the data to be stored in CUDA memory
     std::vector<cv::Mat> ch32(3);
@@ -196,7 +196,7 @@ cv::Mat GetResult(std::string imagePath, std::ofstream &logFile) {
     float milliseconds = 0;
     cudaEventElapsedTime(&milliseconds, start_event, stop_event);
     logFile << std::to_string(milliseconds) << ";";
-    std::cout << "Kernel execution time: " << milliseconds << " ms" << std::endl;
+    //std::cout << "Kernel execution time: " << milliseconds << " ms" << std::endl;
 
     cudaEventDestroy(start_event);
     cudaEventDestroy(stop_event);
@@ -220,15 +220,15 @@ cv::Mat GetResult(std::string imagePath, std::ofstream &logFile) {
     //                                                     Create the gxy matrices for each channel
     
     //Red Channel
-    std::cout << "Red channel " << std::endl;
+    //std::cout << "Red channel " << std::endl;
     cv::Mat Redgxy = createG_x_y_Matrix(2, gxy, channels[2].cols, channels[2].rows);
 
     //Green Channel
-    std::cout << "Green channel " << std::endl;
+    //std::cout << "Green channel " << std::endl;
     cv::Mat Greengxy = createG_x_y_Matrix(1, gxy, channels[1].cols, channels[1].rows);
     
     //Blue Channel
-    std::cout << "Blue channel " << std::endl;
+    //std::cout << "Blue channel " << std::endl;
     cv::Mat Bluegxy = createG_x_y_Matrix(0, gxy, channels[0].cols, channels[0].rows);
       
     // Cuda free the memory
@@ -239,7 +239,7 @@ cv::Mat GetResult(std::string imagePath, std::ofstream &logFile) {
     auto end = std::chrono::high_resolution_clock::now();
     // Calculate the elapsed time in milliseconds
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    std::cout << "Elapsed time: " << elapsed << " ms" << std::endl;
+    //std::cout << "Elapsed time: " << elapsed << " ms" << std::endl;
     logFile << std::to_string(elapsed) << "\n";
     //Recombine the image
     cv::Mat gxyResult;
