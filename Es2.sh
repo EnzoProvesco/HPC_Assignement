@@ -23,7 +23,7 @@ nvcc Es2.cu -o Es2 \
 
 # Run for each image in noise directory
 counter=0
-for [$counter -lt 30]; do
+while [$counter -lt 30]; do
     echo "Processing images in iteration $counter"
     counterimg=0
     for img in "$INPUT_DIR"/*.jpg; do
@@ -42,7 +42,7 @@ for [$counter -lt 30]; do
             ./Es2 "$INPUT_DIR"/"$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename"
 
             nsys stats -f csv -o ./nsysProfile/reportCSV${counter}/${img_filename} -r gpumemsizesum  ./nsysProfile/${img_filename}.nsys-rep
-            counterimg=$((counterimg + 1))
+            counterimg=$((counterimg+1))
         else
             echo "No images found in $INPUT_DIR."
         fi
