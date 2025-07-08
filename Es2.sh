@@ -23,7 +23,7 @@ nvcc Es2.cu -o Es2 \
 
 # Run for each image in noise directory
 counter=0
-while [$counter -lt 30]; do
+while [ $counter -lt 30 ]; do
     echo "Processing images in iteration $counter"
     counterimg=0
     for img in "$INPUT_DIR"/*.jpg; do
