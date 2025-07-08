@@ -258,12 +258,10 @@ int main(int argc, char** argv) {
     int deviceCount = 0;
     cudaGetDeviceCount(&deviceCount);
     std::ofstream logFile("logFile", std::ios::app);
-    
     for (int i = 0; i < deviceCount; ++i) {
         cudaDeviceProp prop;
         cudaGetDeviceProperties(&prop, i);
-        std::ofstream logFile("log.txt", std::ios::app);
-
+/*
         std::cout << "Dispositivo " << i << ": " << prop.name << std::endl;
         std::cout << "  Multiprocessori: " << prop.multiProcessorCount << std::endl;
         std::cout << "  Max thread per blocco: " << prop.maxThreadsPerBlock << std::endl;
@@ -277,18 +275,22 @@ int main(int argc, char** argv) {
                   << prop.maxGridSize[1] << " x "
                   << prop.maxGridSize[2] << std::endl;
         std::cout << "-------------------------------\n";
+*/
     }
 
 
-    for (int i = 1; i < argc; i+=2) {
+    
         logFile << argv[1] <<";";
-        std::cout << "Processing image: " << argv[i] << std::endl;
+        //std::cout << "Processing image: " << argv[1] << std::endl;
         cv::Mat result = GetResult(argv[i], logFile);
-        std::cout << "Saving result to: " << argv[i+1] << std::endl;
-        cv::imwrite(argv[i+1], result);
+        //std::cout << "Saving result to: " << argv[2] << std::endl;        
+        if (if argc > 3 && argv[3] == std::string("-s")) {
+            cv::imwrite(argv[2], result);
+            std::cout << "Result saved successfully image"<< argv[1] << std::endl;
+
+        }
+
         logFile <<"\n";
-        std::cout << "Result saved successfully!" << std::endl;
-    }
     
     return 0;
 }
