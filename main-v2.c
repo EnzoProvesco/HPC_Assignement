@@ -111,9 +111,8 @@ int main(int argc, char** argv) {
     
     // Initialize the resource usage structure and timing variables
     // This will be used to measure the resource usage of the program
-
     struct rusage usage_start, usage_end;
-    double time_end, time_start;
+    double time_end_local, time_start_local;
 
     // Get the initial resource usage
     // This will capture the resource usage at the start of the program
@@ -125,8 +124,8 @@ int main(int argc, char** argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     MPI_Barrier(MPI_COMM_WORLD);
-    if (rank == 0) {
-        time_start = MPI_Wtime();
+    if (rank < MAX_PROCESSES) {
+        time_start_local = MPI_Wtime();
         getrusage(RUSAGE_SELF, &usage_start);
     }
 
@@ -206,6 +205,8 @@ int main(int argc, char** argv) {
 
         int* matrixB = calloc(total_dim * total_dim, sizeof(int));
 
+        // Read the matrices from CSV files
+        // The matrices are expected to be at least of size MATRIX_DIM x MATRIX_DIM
 
         if (read_matrix_from_csv(matrixA, "matrixA.csv", total_dim) == -1 || read_matrix_from_csv(matrixB, "matrixB.csv", total_dim) == -1) {
             fprintf(stderr, "Error reading matrices from CSV files.\n");
@@ -365,31 +366,53 @@ int main(int argc, char** argv) {
     }
     
     MPI_Barrier(MPI_COMM_WORLD);
-    if (rank == 0) {
-        
-        time_end = MPI_Wtime();
-        getrusage(RUSAGE_SELF, &usage_end);
 
-        double user_time = (usage_end.ru_utime.tv_sec - usage_start.ru_utime.tv_sec) +
+    // Finalize the performance logging
+    // This will log the performance metrics to a CSV file
+    if (rank < MAX_PROCESSES) {
+        time_end_local = MPI_Wtime();
+        getrusage(RUSAGE_SELF, &usage_end);
+        
+        user_time = (usage_end.ru_utime.tv_sec - usage_start.ru_utime.tv_sec) +
             (usage_end.ru_utime.tv_usec - usage_start.ru_utime.tv_usec) / 1e6;
 
-        double sys_time = (usage_end.ru_stime.tv_sec - usage_start.ru_stime.tv_sec) +
+        sys_time = (usage_end.ru_stime.tv_sec - usage_start.ru_stime.tv_sec) +
             (usage_end.ru_stime.tv_usec - usage_start.ru_stime.tv_usec) / 1e6;
+        //print the resource usage
         
-        FILE* f = fopen("performance_log.csv", "a");
-        if (!f) {
-            fprintf(stderr, "Error opening performance_log.csv for writing.\n");
-            MPI_Abort(MPI_COMM_WORLD, 1);
-        }
+        printf("Process %d: User time: %.6f sec, System time: %.6f sec, Max RSS: %ld KB, Context switches: %ld\n",
+            rank, user_time, sys_time, usage_end.ru_maxrss, usage_end.ru_nivcsw + usage_end.ru_nvcsw);
+    
+        double elapsed_max, user_time_max, sys_time_max;
+        long rss_max, ctx_switch_max;   
+        
+        MPI_Reduce(&elapsed_local, &elapsed_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&user_time_local, &user_time_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&sys_time_local, &sys_time_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&rss_local, &rss_max, 1, MPI_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&ctx_switch_local, &ctx_switch_max, 1, MPI_LONG, MPI_MAX, 0, MPI_COMM_WORLD);
 
-        // Write header if file is empty
-        fseek(f, 0, SEEK_END);
-        if (ftell(f) == 0) {
-            fprintf(f, "processes,matrix size,elapsed_time_sec,user_cpu_sec,sys_cpu_sec,max_rss_kb,#context_switch\n");
+        if (rank == 0)
+        {
+            
+            FILE* f = fopen("performance_log.csv", "a");
+            if (!f) {
+                fprintf(stderr, "Error opening performance_log.csv for writing.\n");
+                MPI_Abort(MPI_COMM_WORLD, 1);
+            }
+    
+            // Write header if file is empty
+            fseek(f, 0, SEEK_END);
+            if (ftell(f) == 0) {
+                fprintf(f, "processes,matrix size,elapsed_time_sec,user_cpu_sec,sys_cpu_sec,max_rss_kb,#context_switch\n");
+            }
+            fprintf(f, "%d,%d,%.6f,%.6f,%.6f,%ld,%ld\n",MAX_PROCESSES,MATRIX_DIM, elapsed_max, user_time_max, sys_time_max, rss_max, ctx_switch_max);
+            fclose(f);
         }
-        fprintf(f, "%d,%d,%.6f,%.6f,%.6f,%ld,%ld\n",MAX_PROCESSES,MATRIX_SIZE, time_end - time_start, user_time, sys_time, usage_end.ru_maxrss, usage_end.ru_nivcsw);
-        fclose(f);
+        
+
     }
+
     MPI_Finalize();
 
     free(tempA);
