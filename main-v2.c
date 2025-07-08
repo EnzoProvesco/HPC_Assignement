@@ -113,6 +113,8 @@ int main(int argc, char** argv) {
     // This will be used to measure the resource usage of the program
     struct rusage usage_start, usage_end;
     double time_end_local, time_start_local;
+    double elapsed_local, user_time_local, sys_time_local;
+    long rss_local, ctx_switch_local;
 
     // Get the initial resource usage
     // This will capture the resource usage at the start of the program
@@ -373,15 +375,18 @@ int main(int argc, char** argv) {
         time_end_local = MPI_Wtime();
         getrusage(RUSAGE_SELF, &usage_end);
         
-        user_time = (usage_end.ru_utime.tv_sec - usage_start.ru_utime.tv_sec) +
+        user_time_local = (usage_end.ru_utime.tv_sec - usage_start.ru_utime.tv_sec) +
             (usage_end.ru_utime.tv_usec - usage_start.ru_utime.tv_usec) / 1e6;
 
-        sys_time = (usage_end.ru_stime.tv_sec - usage_start.ru_stime.tv_sec) +
+        sys_time_local = (usage_end.ru_stime.tv_sec - usage_start.ru_stime.tv_sec) +
             (usage_end.ru_stime.tv_usec - usage_start.ru_stime.tv_usec) / 1e6;
         //print the resource usage
-        
+        elapsed_local = time_end_local - time_start_local;
+        rss_local = usage_end.ru_maxrss; // Maximum resident set size in KB 
+        ctx_switch_local = usage_end.ru_nivcsw; // Number of involuntary context switches
+
         printf("Process %d: User time: %.6f sec, System time: %.6f sec, Max RSS: %ld KB, Context switches: %ld\n",
-            rank, user_time, sys_time, usage_end.ru_maxrss, usage_end.ru_nivcsw + usage_end.ru_nvcsw);
+            rank, user_time_local, sys_time_local, usage_end.ru_maxrss, usage_end.ru_nivcsw);
     
         double elapsed_max, user_time_max, sys_time_max;
         long rss_max, ctx_switch_max;   
