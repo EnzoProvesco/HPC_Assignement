@@ -39,9 +39,9 @@ while [ $counter -lt 30 ]; do
             --cuda-memory-usage=true\
             -o ./nsysProfile/${img_filename}.nsys-rep \
             --force-overwrite true \
-            ./Es2 "$INPUT_DIR"/"$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename"
+            ./Es2 "$INPUT_DIR"/"$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename" > /dev/null 2>&1
 
-            nsys stats -f csv -o ./nsysProfile/reportCSV${counter}/${img_filename} -r gpumemsizesum  ./nsysProfile/${img_filename}.nsys-rep
+            nsys stats -f csv -o ./nsysProfile/reportCSV${counter}/${img_filename} -r gpumemsizesum  ./nsysProfile/${img_filename}.nsys-rep > dev/null 2>&1
             counterimg=$((counterimg+1))
         else
             echo "No images found in $INPUT_DIR."
