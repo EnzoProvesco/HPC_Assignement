@@ -28,7 +28,7 @@ while [$counter -lt 30]; do
     counterimg=0
     for img in "$INPUT_DIR"/*.jpg; do
         if [ -f "$img" ]; then
-            if [ (( counterimg % 10 == 0 )) ]; then
+            if (( counterimg % 10 == 0 )); then
                 echo "Processing image $counterimg"
             fi
             ((counterimg++))
