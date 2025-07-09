@@ -51,8 +51,3 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
-
-#Results directory
-input/*
-output/*
-logData/*
