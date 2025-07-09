@@ -39,6 +39,7 @@ while [ $counter -lt 1 ]; do
             -o ../logData/nsysProfile/${img_filename}.nsys-rep \
             --force-overwrite true \
             ./Es2 "$INPUT_DIR"/"$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename" > /dev/null 2>&1
+            echo "Image processed: $img_filename" >> ../logData/logFile
             mkdir -p ../logData/nsysProfile/reportCSV${counter}
             nsys stats -f csv -o ../logData/nsysProfile/reportCSV${counter}/${img_filename} -r gpumemsizesum  ../logData/nsysProfile/${img_filename}.nsys-rep > /dev/null 2>&1
             rm ../logData/nsysProfile/${img_filename}.nsys-rep
