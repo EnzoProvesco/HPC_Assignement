@@ -30,7 +30,6 @@ while [ $counter -lt 30 ]; do
             if (( counterimg % 10 == 0 )); then
                 echo "Processing image $counterimg"
             fi
-            ((counterimg++))
             img_directory=$(dirname "$img")
             img_filename=$(basename "$img")
             nsys profile \
@@ -48,5 +47,6 @@ while [ $counter -lt 30 ]; do
             echo "No images found in $INPUT_DIR."
         fi
     done
+    counter=$((counter+1))
 done
 rm ./Es2
