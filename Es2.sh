@@ -20,6 +20,7 @@ nvcc Es2.cu -o Es2 \
   -lstdc++ -lcudart
 
 # Run for each image in noise directory
+mkdir -p ./logData/nsysProfile
 counter=0
 while [ $counter -lt 30 ]; do
     echo "Processing images in iteration $counter"
@@ -35,13 +36,13 @@ while [ $counter -lt 30 ]; do
             nsys profile \
             --trace=cuda \
             --cuda-memory-usage=true\
-            -o ./nsysProfile/${img_filename}.nsys-rep \
+            -o ./logData/nsysProfile/${img_filename}.nsys-rep \
             --force-overwrite true \
             ./Es2 "$INPUT_DIR"/"$img_filename" "$OUTPUT_DIR"/BLUR"$img_filename" > /dev/null 2>&1
-            mkdir -p ./nsysProfile/reportCSV${counter}
-            nsys stats -f csv -o ./nsysProfile/reportCSV${counter}/${img_filename} -r gpumemsizesum  ./nsysProfile/${img_filename}.nsys-rep > /dev/null 2>&1
-            rm ./nsysProfile/${img_filename}.nsys-rep
-            rm ./nsysProfile/${img_filename}.sqlite
+            mkdir -p ./logData/nsysProfile/reportCSV${counter}
+            nsys stats -f csv -o ./logData/nsysProfile/reportCSV${counter}/${img_filename} -r gpumemsizesum  ./logData/nsysProfile/${img_filename}.nsys-rep > /dev/null 2>&1
+            rm ./logData/nsysProfile/${img_filename}.nsys-rep
+            rm ./logData/nsysProfile/${img_filename}.sqlite
             counterimg=$((counterimg+1))
         else
             echo "No images found in $INPUT_DIR."

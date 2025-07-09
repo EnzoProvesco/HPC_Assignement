@@ -55,4 +55,4 @@ dkms.conf
 #Results directory
 input/*
 output/*
-logFile
+logData/*

@@ -257,7 +257,7 @@ cv::Mat GetResult(std::string imagePath, std::ofstream &logFile) {
 int main(int argc, char** argv) {
     int deviceCount = 0;
     cudaGetDeviceCount(&deviceCount);
-    std::ofstream logFile("logFile", std::ios::app);
+    std::ofstream logFile("./logData/logFile", std::ios::app);
     for (int i = 0; i < deviceCount; ++i) {
         cudaDeviceProp prop;
         cudaGetDeviceProperties(&prop, i);
