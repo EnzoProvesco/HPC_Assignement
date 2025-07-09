@@ -49,3 +49,4 @@ while [ $counter -lt 30 ]; do
         fi
     done
 done
+rm ./Es2
