@@ -44,56 +44,101 @@ cv::Mat createG_x_y_Matrix(int channelId, float* gxy, int C, int R){
 
 __global__ void g_x_y_calculation(float *channel, float *gxy, int CH, int R, int CO){
 
-    // 1. Dichiara la tile in memoria condivisa usando le costanti
+    // shared tile memory declaration 
     __shared__ float tile[TILE_DIM + 2 * HALO_SIZE][TILE_DIM + 2 * HALO_SIZE];
 
-    // 2. Calcola gli indici del thread e del blocco
-    int tx = threadIdx.x; // Indice x del thread nel blocco (0 to TILE_DIM-1)
-    int ty = threadIdx.y; // Indice y del thread nel blocco (0 to TILE_DIM-1)
-    int z = blockIdx.z;   // Indice del canale
+    // index calculation
+    int tx = threadIdx.x;
+    int ty = threadIdx.y; 
+    int z = blockIdx.z;
 
-    // Calcola le coordinate di output globali per questo thread
+    // Global output and input coordinates for the pixel taken into account
     int x_out = blockIdx.x * TILE_DIM + tx;
     int y_out = blockIdx.y * TILE_DIM + ty;
 
-    // Calcola le coordinate di input globali per caricare la tile
-    // Ogni thread carica il pixel che corrisponde alla sua posizione nel blocco
     int x_in = x_out - HALO_SIZE;
     int y_in = y_out - HALO_SIZE;
 
-    // 3. Carica i dati dalla memoria globale alla memoria condivisa
-    // Ogni thread carica un pixel. La posizione nella tile include l'offset dell'halo.
-    if (x_in >= 0 && x_in < CO && y_in >= 0 && y_in < R) {
+// Load the tile with the data from the channel
+    int x_in = x_out;
+    int y_in = y_out;
+    if (x_in < CO && y_in < R) {
         tile[ty + HALO_SIZE][tx + HALO_SIZE] = channel[z * (R * CO) + y_in * CO + x_in];
     } else {
-        tile[ty + HALO_SIZE][tx + HALO_SIZE] = 0.0f; // Padding per i bordi
+        tile[ty + HALO_SIZE][tx + HALO_SIZE] = 0.0f;
     }
 
-    // Carica le parti della halo (solo i thread ai bordi del blocco)
-    // Halo sinistra/destra
     if (tx < HALO_SIZE) {
-        // Carica halo sinistra
-        x_in = x_out - HALO_SIZE - TILE_DIM; // Esempio semplificato, la logica può essere complessa
-        // ... logica per caricare halo sinistra ...
-        tile[ty + HALO_SIZE][tx] = 0.f; // Semplificato: padding a zero
+        // Load the left halo
+        x_in = x_out - TILE_DIM;
+        if (x_in >= 0 && y_in < R) {
+            tile[ty + HALO_SIZE][tx] = channel[z * (R * CO) + y_in * CO + x_in];
+        } else {
+            tile[ty + HALO_SIZE][tx] = 0.0f;
+        }
+        // Load right Halo
+        x_in = x_out + TILE_DIM;
+        if (x_in < CO && y_in < R) {
+            tile[ty + HALO_SIZE][tx + TILE_DIM + HALO_SIZE] = channel[z * (R * CO) + y_in * CO + x_in];
+        } else {
+            tile[ty + HALO_SIZE][tx + TILE_DIM + HALO_SIZE] = 0.0f;
+        }
     }
-    // ... logica simile per le altre parti della halo ...
 
-    // 4. Sincronizza i thread del blocco
-    // Assicura che tutta la tile sia caricata prima di procedere
+
+    if (ty < HALO_SIZE) {
+        // CLoad upper halo
+        y_in = y_out - TILE_DIM;
+        if (y_in >= 0 && x_out < CO) {
+            tile[ty][tx + HALO_SIZE] = channel[z * (R * CO) + y_in * CO + x_out];
+        } else {
+            tile[ty][tx + HALO_SIZE] = 0.0f;
+        }
+        // Load lower Halo
+        y_in = y_out + TILE_DIM;
+        if (y_in < R && x_out < CO) {
+            tile[ty + TILE_DIM + HALO_SIZE][tx + HALO_SIZE] = channel[z * (R * CO) + y_in * CO + x_out];
+        } else {
+            tile[ty + TILE_DIM + HALO_SIZE][tx + HALO_SIZE] = 0.0f;
+        }
+    }
+
+    // Load corners
+    if (tx < HALO_SIZE && ty < HALO_SIZE) {
+        // up left
+        x_in = x_out - TILE_DIM;
+        y_in = y_out - TILE_DIM;
+        if (x_in >= 0 && y_in >= 0) tile[ty][tx] = channel[z * (R * CO) + y_in * CO + x_in]; else tile[ty][tx] = 0.0f;
+        
+        // up right
+        x_in = x_out + TILE_DIM;
+        y_in = y_out - TILE_DIM;
+        if (x_in < CO && y_in >= 0) tile[ty][tx + TILE_DIM + HALO_SIZE] = channel[z * (R * CO) + y_in * CO + x_in]; else tile[ty][tx + TILE_DIM + HALO_SIZE] = 0.0f;
+
+        // low left
+        x_in = x_out - TILE_DIM;
+        y_in = y_out + TILE_DIM;
+        if (x_in >= 0 && y_in < R) tile[ty + TILE_DIM + HALO_SIZE][tx] = channel[z * (R * CO) + y_in * CO + x_in]; else tile[ty + TILE_DIM + HALO_SIZE][tx] = 0.0f;
+
+        // low right
+        x_in = x_out + TILE_DIM;
+        y_in = y_out + TILE_DIM;
+        if (x_in < CO && y_in < R) tile[ty + TILE_DIM + HALO_SIZE][tx + TILE_DIM + HALO_SIZE] = channel[z * (R * CO) + y_in * CO + x_in]; else tile[ty + TILE_DIM + HALO_SIZE][tx + TILE_DIM + HALO_SIZE] = 0.0f;
+    }
+
+    //Thread sync to be sure all threads have written to the tile
     __syncthreads();
 
-    // 5. Esegui il calcolo leggendo dalla memoria condivisa (veloce)
+    // Actual fitler application
     if (x_out < CO && y_out < R) {
-        // Salta i bordi dell'immagine dove il kernel 3x3 non può essere applicato
+        // At border it is 0 by default
         if (x_out == 0 || x_out >= CO - 1 || y_out == 0 || y_out >= R - 1) {
             gxy[z * (R * CO) + y_out * CO + x_out] = 0.0f;
         } else {
             int W[3][3] = {{1, 2, 1}, {3, 4, 3}, {1, 2, 1}};
             float sum = 0.0f;
 
-            // Leggi dalla tile usando le coordinate locali del thread + halo
-            #pragma unroll
+            #pragma unroll // Reduce overhead of loop control
             for (int i = 0; i < 3; i++) {
                 #pragma unroll
                 for (int j = 0; j < 3; j++) {
@@ -262,15 +307,17 @@ int main(int argc, char** argv) {
         cudaDeviceProp prop;
         cudaGetDeviceProperties(&prop, i);
 /*
-        std::cout << "Dispositivo " << i << ": " << prop.name << std::endl;
-        std::cout << "  Multiprocessori: " << prop.multiProcessorCount << std::endl;
-        std::cout << "  Max thread per blocco: " << prop.maxThreadsPerBlock << std::endl;
-        std::cout << "  Max thread per multiprocessore: " << prop.maxThreadsPerMultiProcessor << std::endl;
-        std::cout << "  Dimensioni massime di un blocco: "
+        ----------------- Local debugging -----------------
+
+        std::cout << "Device " << i << ": " << prop.name << std::endl;
+        std::cout << "  Multiprocessors: " << prop.multiProcessorCount << std::endl;
+        std::cout << "  Max thread per block: " << prop.maxThreadsPerBlock << std::endl;
+        std::cout << "  Max thread per multiprocessor: " << prop.maxThreadsPerMultiProcessor << std::endl;
+        std::cout << "  Max dim for block: "
                   << prop.maxThreadsDim[0] << " x "
                   << prop.maxThreadsDim[1] << " x "
                   << prop.maxThreadsDim[2] << std::endl;
-        std::cout << "  Dimensioni massime della griglia: "
+        std::cout << "  Max dim for grid: "
                   << prop.maxGridSize[0] << " x "
                   << prop.maxGridSize[1] << " x "
                   << prop.maxGridSize[2] << std::endl;
